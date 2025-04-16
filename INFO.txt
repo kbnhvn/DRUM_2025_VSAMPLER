@@ -1,0 +1,8 @@
+
+- Motor de audio con tabla de frecuencias para el pitch
+- Samples en flash, partición de 3.5MB. con 50 simples me queda el 90%
+- los dos pots superiores mueven la reverb
+- Falta que al estar en shifting los botones norot cambien a los valores que ejecutan (+-100, +-20)
+- Reverb por canal on/off
+- Se pierden visualizaciones de step y algunas notas.
+- Intento cambiar los botones para que el refresco sea mas preciso
