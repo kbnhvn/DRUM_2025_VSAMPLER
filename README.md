@@ -7,6 +7,7 @@ This is my DRUM SAMPLER HIFI MACHINE for Guition ESP32 JC4827W543 (Capacitive to
 Sounds are stored on flash as const arrays.
 50 selectable samples with different size.
 16 sounds/tracks. 16 patterns. 16 memories (16 pattern each)
+Random pattern/sound generator
 
 HARDWARE:
 Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.click.aliexpress.com/e/_EzVhSEH
@@ -38,7 +39,7 @@ TODO:
 - Rename sample files (code is ready)
 - Flag "#define" to avoid use of ADS1115 and rotary encoder
 - Add a reverb code (I tried a lot but no good result) or some other audio FX.
-- Solve some issues
+- Solve issues
 - Add photos. Rec a video. Finish this read me.
 
 
