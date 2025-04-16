@@ -37,6 +37,8 @@ Sounds specs: 44100hz, 16Bit, Mono
 
 TODO:
 - Rename sample files (code is ready)
+- MIDI. Not tested.
+- MDI BLE. Waiting update. Now can't compile.
 - Flag "#define" to avoid use of ADS1115 and rotary encoder
 - Add a reverb code (I tried a lot but no good result) or some other audio FX.
 - Solve issues
