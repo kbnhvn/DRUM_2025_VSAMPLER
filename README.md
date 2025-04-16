@@ -10,6 +10,7 @@ Sounds are stored on flash as const arrays.
 
 HARDWARE:
 Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.click.aliexpress.com/e/_EzVhSEH
+
 PCM5102A I2s DAC
 Optional:
 ADS1115 (I2c ADC)
