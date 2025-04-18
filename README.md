@@ -35,7 +35,7 @@ Partition: Huge APP 3MB or custom CSV
 
 Libraries:
 
-Sequencer Timer - Modified version of uClock. ([add macsbug link](https://github.com/midilab/uClock/issues/48)). I'm testing an alternative.
+Sequencer Timer - Modified version of uClock. ([macsbug solution](https://github.com/midilab/uClock/issues/48)). I'm testing an alternative. Commented funcs included. Random boot :(
 
 TFT - Arduino_GFX_Library
 
@@ -57,4 +57,9 @@ Sounds specs: 44100hz, 16Bit, Mono
 - Solve issues
 - Rec a video. Finish this read me.
 
+# NEXT VERSION:
+Target is to use SD card instead of flash.
+- Use 8MB PSRAM
+- Wav file explorer
+- PSRAM manager
 
