@@ -35,7 +35,7 @@ Partition: Huge APP 3MB or custom CSV
 
 Libraries:
 
-Sequencer Timer - Modified version of uClock. (add macsbug link). I'm testing an alternative.
+Sequencer Timer - Modified version of uClock. ([add macsbug link](https://github.com/midilab/uClock/issues/48)). I'm testing an alternative.
 
 TFT - Arduino_GFX_Library
 
