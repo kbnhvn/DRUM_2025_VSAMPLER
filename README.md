@@ -1,5 +1,6 @@
 # DRUM_2025_VSAMPLER
 ESP32 DRUM SAMPLER MACHINE (JC4827W543 C BOARD)
+![drum_2025_vsampler](https://github.com/user-attachments/assets/3fb7114c-5d6b-4e27-aafa-b983e639490f)
 
 This is my DRUM SAMPLER HIFI MACHINE for Guition ESP32 JC4827W543 (Capacitive touch model)
 
