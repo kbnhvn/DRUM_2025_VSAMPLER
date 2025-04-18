@@ -10,7 +10,7 @@ Sounds are stored on flash as const arrays.
 16 sounds/tracks. 16 patterns. 16 memories (16 pattern each)
 Random pattern/sound generator
 
-HARDWARE:
+# HARDWARE:
 
 Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.click.aliexpress.com/e/_EzVhSEH
 
@@ -24,14 +24,15 @@ ADS1115 (I2c ADC)
 
 1 Rotary encoder
 
-SOFTWARE:
+# SOFTWARE:
 
 IDE: Arduino 2.3.5
 
 Boards: Expressif Systems 3.2.0
 Board: ESP32S3 Dev module
+Partition: Huge APP 3MB or custom CSV
 
-Necessary Libraries:
+Libraries:
 
 Sequencer Timer - Modified version of uClock. (add macsbug link). I'm testing an alternative.
 
@@ -45,7 +46,7 @@ To get .c from sound files I use wavtocode (windows) https://colinjs.com/softwar
 Sounds specs: 44100hz, 16Bit, Mono
 
 
-TODO:
+# TODO:
 
 - Rename sample files (code is ready)
 - MIDI. Not tested.
