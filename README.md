@@ -9,6 +9,7 @@ Sounds are stored on flash as const arrays.
 50 selectable samples with different size.
 16 sounds/tracks. 16 patterns. 16 memories (16 pattern each)
 Random pattern/sound generator
+Sample parameters: Begin, End, Pitch, Reverse, Vol, Pan, Filter
 
 # HARDWARE:
 
@@ -48,12 +49,12 @@ Sounds specs: 44100hz, 16Bit, Mono
 
 # TODO:
 
-- Rename sample files (code is ready)
+- Add sample files names instead of sample number (code is ready)
 - MIDI. Not tested.
-- MDI BLE. Waiting update. Now can't compile.
+- MIDI BLE. Waiting update. Now can't compile.
 - Flag "#define" to avoid use of ADS1115 and rotary encoder
 - Add a reverb code (I tried a lot but no good result) or some other audio FX.
 - Solve issues
-- Add photos. Rec a video. Finish this read me.
+- Rec a video. Finish this read me.
 
 
