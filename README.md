@@ -5,10 +5,15 @@ ESP32 DRUM SAMPLER MACHINE (JC4827W543 C BOARD)
 This is my DRUM SAMPLER HIFI MACHINE for Guition ESP32 JC4827W543 (Capacitive touch model)
 
 44100 Hz, 16 Bit, 16 polyphony.
+
 Sounds are stored on flash as const arrays.
+
 50 selectable samples with different size.
+
 16 sounds/tracks. 16 patterns. 16 memories (16 pattern each)
+
 Random pattern/sound generator
+
 Sample parameters: Begin, End, Pitch, Reverse, Vol, Pan, Filter
 
 # HARDWARE:
