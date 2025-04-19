@@ -24,11 +24,15 @@ PCM5102A I2s DAC
 
 Optional:
 
+![MODULO](https://github.com/user-attachments/assets/4a1d3dbe-8290-43cb-9718-73bc6ba3658f)
+
 ADS1115 (I2c ADC)
 
 4 pots (B10k)
 
 1 Rotary encoder
+
+Gerber file attached into file ads1115 module.rar
 
 # SOFTWARE:
 
@@ -50,8 +54,6 @@ If samples don't fit into flash you can use custom partition included to get 3.5
 You can replace the sounds changing code "easily".
 To get .c from sound files I use wavtocode (windows) https://colinjs.com/software.htm#t_WAVToCode
 Sounds specs: 44100hz, 16Bit, Mono
-
-![MODULO](https://github.com/user-attachments/assets/4a1d3dbe-8290-43cb-9718-73bc6ba3658f)
 
 
 # TODO:
