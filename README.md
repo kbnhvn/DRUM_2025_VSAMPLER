@@ -51,6 +51,8 @@ You can replace the sounds changing code "easily".
 To get .c from sound files I use wavtocode (windows) https://colinjs.com/software.htm#t_WAVToCode
 Sounds specs: 44100hz, 16Bit, Mono
 
+![MODULO](https://github.com/user-attachments/assets/4a1d3dbe-8290-43cb-9718-73bc6ba3658f)
+
 
 # TODO:
 
