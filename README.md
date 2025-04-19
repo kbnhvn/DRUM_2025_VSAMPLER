@@ -16,8 +16,6 @@ Random pattern/sound generator
 
 Sample parameters: Begin, End, Pitch, Reverse, Vol, Pan, Filter
 
-https://www.youtube.com/watch?v=HiQ_GUZait4&t=1s&ab_channel=zcarloszc
-
 # HARDWARE:
 
 Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.click.aliexpress.com/e/_EzVhSEH
@@ -57,6 +55,9 @@ You can replace the sounds changing code "easily".
 To get .c from sound files I use wavtocode (windows) https://colinjs.com/software.htm#t_WAVToCode
 Sounds specs: 44100hz, 16Bit, Mono
 
+# VIDEO:
+
+https://www.youtube.com/watch?v=HiQ_GUZait4&t=1s&ab_channel=zcarloszc
 
 # TODO:
 
