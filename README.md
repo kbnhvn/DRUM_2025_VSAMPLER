@@ -16,6 +16,8 @@ Random pattern/sound generator
 
 Sample parameters: Begin, End, Pitch, Reverse, Vol, Pan, Filter
 
+https://www.youtube.com/watch?v=HiQ_GUZait4&t=1s&ab_channel=zcarloszc
+
 # HARDWARE:
 
 Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.click.aliexpress.com/e/_EzVhSEH
@@ -64,7 +66,7 @@ Sounds specs: 44100hz, 16Bit, Mono
 - Flag "#define" to avoid use of ADS1115 and rotary encoder
 - Add a reverb code (I tried a lot but no good result) or some other audio FX.
 - Solve issues
-- Rec a video. Finish this read me.
+- Finish this read me.
 
 # NEXT VERSION:
 Target is to use SD card instead of flash.
