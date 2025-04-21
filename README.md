@@ -23,6 +23,8 @@ Guition JC4827W543 C (ESP32-S3 N4R8, LCD ILI9488, touch panel GT911) https://s.c
 PCM5102A I2s DAC
 
 Optional:
+No ADS (pots) and no rotary by default. If you want to use ADS and rotary uncomment line 17
+//#define ads_ok
 
 ![MODULO](https://github.com/user-attachments/assets/4a1d3dbe-8290-43cb-9718-73bc6ba3658f)
 
