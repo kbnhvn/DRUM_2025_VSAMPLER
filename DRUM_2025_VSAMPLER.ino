@@ -13,6 +13,9 @@
 
 //#define mylcd_type1
 #define mylcd_type2
+// if you don't have a ADS1115 and rotary comment next line
+//#define ads_ok
+
 
 int32_t muestra;
 #define SAMPLE_RATE 44100         // Frecuencia de muestreo (44.1 kHz)
@@ -747,6 +750,7 @@ void setup() {
   
   // Iniciar el primer puerto I2C
   Wire.begin(TOUCH_SDA, TOUCH_SCL,400000);
+  #ifdef ads_ok
   // Iniciar el segundo puerto I2C
   I2C_2.begin(SDA_2, SCL_2, 400000);
 
@@ -756,7 +760,7 @@ void setup() {
   } else {
     Serial.println("ADS1015 init OK.");
   }
-
+  #endif
 //........................................................................................................................
 // LCD and TOUCH
   // Init Display
@@ -858,12 +862,12 @@ void setup() {
 //    sstep=firstStep;
 //    refreshPADSTEP=true; 
 //    playing=true;
-
+  #ifdef ads_ok
   // Rotary
   pinMode(pinBR1,INPUT_PULLUP);
   pinMode(CLK,INPUT_PULLUP);
   pinMode(DT,INPUT_PULLUP);
-
+  #endif
 //........................................................................................................................
 //
 //   B L E M I D I
@@ -933,8 +937,9 @@ void loop() {
 
   // Read MIDI ports
   //MIDI.read();
-
+  #ifdef ads_ok
   shiftR1=!digitalRead(pinBR1);
+  #endif
 
   // if (shiftR1!=old_shiftR1){
   //   old_shiftR1=shiftR1;
@@ -942,8 +947,9 @@ void loop() {
   //   //Serial.println(shiftR1);
   //   if (!shiftR1) refreshPATTERN=true;
   // }
-
+  #ifdef ads_ok
   READ_ENCODERS();
+  #endif
   read_touch();
   DO_KEYPAD();
   REFRESH_KEYS();
@@ -951,12 +957,14 @@ void loop() {
 
   showLastTouched();
   clearLastTouched();
-
+  
+  #ifdef ads_ok
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     READ_POTS(); 
   }
+  #endif
 
   // Weird code!!!! Segunda carga de setsoud porque con la primera no se generan bien el inicio y el fin de sample y el volumen/pan. Parece que no le da tiempo.
   if (flag_ss=true){
