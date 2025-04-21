@@ -66,7 +66,6 @@ https://www.youtube.com/watch?v=HiQ_GUZait4&t=1s&ab_channel=zcarloszc
 - Add sample files names instead of sample number (code is ready)
 - MIDI. Not tested.
 - MIDI BLE. Waiting update. Now can't compile.
-- Flag "#define" to avoid use of ADS1115 and rotary encoder
 - Add a reverb code (I tried a lot but no good result) or some other audio FX.
 - Solve issues
 - Finish this read me.
