@@ -34,6 +34,8 @@ ADS1115 (I2c ADC)
 
 1 Rotary encoder
 
+![SCHEMATICS](https://github.com/user-attachments/assets/767dedda-4bc9-43dc-ac95-ab5210c8e54d)
+
 Gerber file attached into file ads1115 module.rar
 
 # SOFTWARE:
