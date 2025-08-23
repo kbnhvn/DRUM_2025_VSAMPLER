@@ -1,3 +1,8 @@
+/*
+ * DRUM_2025_VSAMPLER - Synthétiseur Audio
+ * Support hybride : samples intégrés + samples SD Card
+ */
+
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
     8.18, 8.66, 9.18, 9.72, 10.3, 10.91, 11.56, 12.25, 12.98, 13.75, 14.57, 15.43,
@@ -11,7 +16,131 @@ const float midiFrequencies[128] = {
     2093.0, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520.0, 3729.31, 3951.07
 };
 
+// Types de sources de samples
+enum SampleSource {
+    SAMPLE_SOURCE_BUILTIN = 0,  // Sample intégré en mémoire flash
+    SAMPLE_SOURCE_SD = 1        // Sample chargé depuis SD Card
+};
+
+// Mapping des voix vers les sources de samples
+struct VoiceSampleMapping {
+    SampleSource source;        // Source du sample (intégré ou SD)
+    uint8_t sampleIndex;       // Index du sample (slot SD ou index intégré)
+    uint8_t sdSlot;            // Slot dans le cache SD (si source == SAMPLE_SOURCE_SD)
+    bool isActive;             // Indique si le mapping est actif
+};
+
+// Variables globales pour la gestion hybride des samples
+VoiceSampleMapping voiceMappings[16];
+
+// Fonctions d'accès aux samples hybrides
+inline int16_t getSample(uint8_t voice, uint64_t index);
+inline uint64_t getSampleEnd(uint8_t voice);
+inline uint64_t getSampleLength(uint8_t voice);
+bool assignSampleToVoice(uint8_t voice, SampleSource source, uint8_t sampleIndex);
+
+/*
+ * Initialiser le mapping des voix vers les samples
+ */
+void synthESP32_initVoiceMappings() {
+    for (uint8_t i = 0; i < 16; i++) {
+        voiceMappings[i].source = SAMPLE_SOURCE_BUILTIN;
+        voiceMappings[i].sampleIndex = i;  // Par défaut, chaque voix utilise son sample intégré correspondant
+        voiceMappings[i].sdSlot = 255;     // Pas de slot SD assigné
+        voiceMappings[i].isActive = true;
+    }
+}
+
+/*
+ * Assigner un sample à une voix
+ */
+bool assignSampleToVoice(uint8_t voice, SampleSource source, uint8_t sampleIndex) {
+    if (voice >= 16) return false;
+    
+    if (source == SAMPLE_SOURCE_SD) {
+        // Vérifier que le sample SD est chargé
+        if (!sdIsSampleLoaded(sampleIndex)) {
+            return false;
+        }
+        voiceMappings[voice].sdSlot = sampleIndex;
+    }
+    
+    voiceMappings[voice].source = source;
+    voiceMappings[voice].sampleIndex = sampleIndex;
+    voiceMappings[voice].isActive = true;
+    
+    return true;
+}
+
+/*
+ * Obtenir un échantillon audio pour une voix à un index donné
+ */
+inline int16_t getSample(uint8_t voice, uint64_t index) {
+    if (voice >= 16 || !voiceMappings[voice].isActive) {
+        return 0;
+    }
+    
+    if (voiceMappings[voice].source == SAMPLE_SOURCE_SD) {
+        // Sample depuis SD Card
+        uint8_t sdSlot = voiceMappings[voice].sdSlot;
+        int16_t* sdData = sdGetSampleData(sdSlot);
+        uint32_t sdLength = sdGetSampleLength(sdSlot);
+        uint8_t channels = sdGetSampleChannels(sdSlot);
+        
+        if (sdData == nullptr || index >= sdLength) {
+            return 0;
+        }
+        
+        if (channels == 1) {
+            // Mono
+            return sdData[index];
+        } else {
+            // Stéréo - mixer les deux canaux
+            uint64_t stereoIndex = index * 2;
+            if (stereoIndex + 1 < sdLength * 2) {
+                return (sdData[stereoIndex] + sdData[stereoIndex + 1]) >> 1;
+            }
+        }
+        return 0;
+    } else {
+        // Sample intégré
+        uint8_t sampleIdx = voiceMappings[voice].sampleIndex;
+        if (sampleIdx >= 50 || index >= ENDS[sampleIdx]) {
+            return 0;
+        }
+        return SAMPLES[sampleIdx][index];
+    }
+}
+
+/*
+ * Obtenir la fin d'un sample pour une voix
+ */
+inline uint64_t getSampleEnd(uint8_t voice) {
+    if (voice >= 16 || !voiceMappings[voice].isActive) {
+        return 0;
+    }
+    
+    if (voiceMappings[voice].source == SAMPLE_SOURCE_SD) {
+        uint8_t sdSlot = voiceMappings[voice].sdSlot;
+        return sdGetSampleLength(sdSlot);
+    } else {
+        uint8_t sampleIdx = voiceMappings[voice].sampleIndex;
+        if (sampleIdx >= 50) return 0;
+        return ENDS[sampleIdx];
+    }
+}
+
+/*
+ * Obtenir la longueur d'un sample pour une voix
+ */
+inline uint64_t getSampleLength(uint8_t voice) {
+    return getSampleEnd(voice);
+}
+
 void synthESP32_begin(){
+
+  // Initialiser le mapping des voix
+  synthESP32_initVoiceMappings();
 
   // 16 filters + master L & R (18)
   for (int fi=0; fi < 18; fi++) {
@@ -90,19 +219,19 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
                 stepSize[f]  = 0;
                 continue;
             } else {
-                // Extraigo la muestra
-                sample = SAMPLES[ROTvalue[f][0]][index];
+                // Extraigo la muestra (hybride)
+                sample = getSample(f, index);
                 samplePos[f] -= stepSize[f];
             }
           } else {
-            if (index >= NEWENDS[ROTvalue[f][0]] || index >= ENDS[ROTvalue[f][0]]) {
+            if (index >= NEWENDS[ROTvalue[f][0]] || index >= getSampleEnd(f)) {
                 latch[f]     = 0;
                 samplePos[f] = 0;
                 stepSize[f]  = 0;
                 continue;
             } else {
-                // Extraigo la muestra
-                sample = SAMPLES[ROTvalue[f][0]][index];
+                // Extraigo la muestra (hybride)
+                sample = getSample(f, index);
                 samplePos[f] += stepSize[f];
             }
           }

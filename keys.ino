@@ -9,6 +9,43 @@ void DO_KEYPAD(){
 
       show_last_touched=true;
       start_showlt=start_debounce;
+      
+      // NAVIGATION MENU SYSTEM
+      // Si on est dans le menu principal, router vers le gestionnaire de menu
+      if (isInMainMenu()) {
+        // Calculer les coordonnées approximatives de la zone tactile pour le menu
+        int touchX = BPOS[f][0] + (BPOS[f][2] / 2);
+        int touchY = BPOS[f][1] + (BPOS[f][3] / 2);
+        handleMenuTouch(touchX, touchY);
+        return; // Sortir de la fonction, le menu gère tout
+      }
+      
+      // GESTION FILE BROWSER
+      // Si on est dans le File Browser, router vers le gestionnaire spécialisé
+      if (getCurrentApplication() == APP_FILE_BROWSER) {
+        fileBrowserHandleTouch(nkey);
+        return;
+      }
+      
+      // GESTION SAMPLING STUDIO
+      // Si on est dans le Sampling Studio, router vers le gestionnaire spécialisé
+      if (getCurrentApplication() == APP_SAMPLING_STUDIO) {
+        samplingStudioHandleTouch(nkey);
+        return;
+      }
+      
+      // GESTION WIFI MANAGER
+      // Si on est dans le WiFi Manager, router vers le gestionnaire spécialisé
+      if (getCurrentApplication() == APP_WIFI_SETTINGS) {
+        wifiManagerHandleTouch(nkey);
+        return;
+      }
+      
+      // Bouton retour universel depuis n'importe quelle application
+      if (nkey == 23 && !isInMainMenu()) { // Bouton SONG/RETOUR
+        returnToMainMenu();
+        return;
+      }
  
       if (nkey<16){
          
@@ -16,16 +53,19 @@ void DO_KEYPAD(){
 
           case tPiano: // 16 keys=16 notes
             synthESP32_TRIGGER_P(selected_sound,nkey+(12*octave));
+            // Send MIDI Note On for piano mode
+            midiSendNoteOn(selected_sound + 1, nkey+(12*octave), 100);
             if (recording){
               bitWrite(pattern[selected_sound],sstep,1);
               melodic[selected_sound][sstep]=nkey+(12*octave);
             }
             refreshPATTERN=true;
-            break;          
+            break;
           case tPad: // play pads
 
             synthESP32_TRIGGER(nkey);
-
+            // Send MIDI Note for pad trigger
+            midiSendPadTrigger(nkey, 100);
 
             if (recording){
               bitWrite(pattern[nkey],sstep,1); //!bitRead(pattern[nkey],sstep));
@@ -33,6 +73,8 @@ void DO_KEYPAD(){
             } else {
 
               synthESP32_TRIGGER(nkey);
+              // Send MIDI Note for pad trigger (redundant but kept for clarity)
+              midiSendPadTrigger(nkey, 100);
             
             }
             //if (!shiftR1 && !shifting){
@@ -265,7 +307,9 @@ void DO_KEYPAD(){
                 sstep=firstStep;
                 recording=false;
                 clearPADSTEP=true;
-                pattern_song_counter=0; 
+                pattern_song_counter=0;
+                // Send MIDI Stop
+                midiSendStop();
               } else {
                 if (sync_state==2){ // if this machine is slave dont start playing now
                   pre_playing=true;
@@ -274,10 +318,12 @@ void DO_KEYPAD(){
                   uClock.start();
                   //startTimer();
                   sstep=firstStep;
-                  refreshPADSTEP=true;  
+                  refreshPADSTEP=true;
+                  // Send MIDI Start
+                  midiSendStart();
                 }
               }
-              playing=!playing; 
+              playing=!playing;
               break;
             // Song
             case 23:
@@ -322,10 +368,12 @@ void DO_KEYPAD(){
                 recording=true;
                 playing=true;
                 sstep=firstStep;
-                refreshPADSTEP=true;  
+                refreshPADSTEP=true;
+                // Send MIDI Start when starting recording
+                midiSendStart();
               }
               if (songing) recording=false; // in song mode cant save modified patterns. I would need a new flag. so much cpu time?
-              //refreshMODES=true;  
+              //refreshMODES=true;
               break;
             case 23:
                modeZ=tMemo;
@@ -333,52 +381,63 @@ void DO_KEYPAD(){
           }         
         }
       } else if (nkey<32){
-        switch (nkey){
-          case 24:
-            shifting=!shifting;
-            refresh_shift_key();
-            break;
-          case 25:
-            old_counter1=counter1;
-            if (shifting || shiftR1) {
-              counter1=counter1-1;
-            } else {
-              counter1=counter1-1;
-            }
-            do_rot();
-            break;
-          case 26:
-            old_counter1=counter1;
-            if (shifting || shiftR1) {
-              counter1=counter1-100;
-            } else {
-              counter1=counter1-10;
-            }
-            do_rot();
-            break;
-          case 27:
-            old_counter1=counter1;
-            if (shifting || shiftR1) {
-              counter1=counter1+100;
-            } else {
-              counter1=counter1+10;
-            }
-            do_rot();
-            break;
-          case 28:
-            old_counter1=counter1;
-            if (shifting || shiftR1) {
-              counter1=counter1+1;
-            } else {
-              counter1=counter1+1;
-            }
-            do_rot();
-            break;
-          case 31:
-            shifting=!shifting;
-            refresh_shift_key();
-            break;  
-        }   
+        // Gestion spéciale pour les nouveaux boutons du menu dans les applications
+        if (nkey == 29) { // SD BROWSE - nouveau bouton
+          if (!isInMainMenu()) {
+            handleSDCommands(0); // SD BROWSE
+          }
+        } else if (nkey == 30) { // SD LOAD - nouveau bouton
+          if (!isInMainMenu()) {
+            handleSDCommands(1); // SD LOAD
+          }
+        } else {
+          switch (nkey){
+            case 24:
+              shifting=!shifting;
+              refresh_shift_key();
+              break;
+            case 25:
+              old_counter1=counter1;
+              if (shifting || shiftR1) {
+                counter1=counter1-1;
+              } else {
+                counter1=counter1-1;
+              }
+              do_rot();
+              break;
+            case 26:
+              old_counter1=counter1;
+              if (shifting || shiftR1) {
+                counter1=counter1-100;
+              } else {
+                counter1=counter1-10;
+              }
+              do_rot();
+              break;
+            case 27:
+              old_counter1=counter1;
+              if (shifting || shiftR1) {
+                counter1=counter1+100;
+              } else {
+                counter1=counter1+10;
+              }
+              do_rot();
+              break;
+            case 28:
+              old_counter1=counter1;
+              if (shifting || shiftR1) {
+                counter1=counter1+1;
+              } else {
+                counter1=counter1+1;
+              }
+              do_rot();
+              break;
+            case 31:
+              shifting=!shifting;
+              refresh_shift_key();
+              break;
+          }
+        }
         //refreshPADTOUCHED=true;
       } else { // bars
         selected_rot=nkey-32;

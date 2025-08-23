@@ -37,22 +37,26 @@
 //   timer_disable_intr(TIMER_GROUP, TIMER_INDEX);
 // }
 
-void IRAM_ATTR tic(){  
+void IRAM_ATTR tic(){
   if (sstep==firstStep){
     sync_flag=true;
-  }  
-  for (int f = 0; f < 16; f++) { 
+  }
+  for (int f = 0; f < 16; f++) {
     if (!bitRead(mutes, f)) {
       if (solos == 0 || (solos > 0 && bitRead(solos, f))) {
         if (bitRead(pattern[f], sstep)) { // note on
-          latch[f]=0;        
+          latch[f]=0;
           if (bitRead(isMelodic,f)){
             synthESP32_TRIGGER_P(f,melodic[f][sstep]);
+            // Send MIDI Note On for melodic tracks
+            midiSendNoteOn(f + 1, melodic[f][sstep], 100);
           } else {
             // Trigger con el pitch del canal
             synthESP32_TRIGGER(f);
+            // Send MIDI Note On for drum tracks
+            midiSendPadTrigger(f, 100);
           }
-        } 
+        }
       }
     }
   }
@@ -67,6 +71,9 @@ void IRAM_ATTR tic(){
     }
   }
   refreshPADSTEP=true;
+  
+  // Send MIDI Clock on step advance
+  midiSendClockOnStep();
 }
 
 

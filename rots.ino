@@ -43,6 +43,8 @@ void do_rot(){
     } else if (selected_rot==9){
       master_vol=counter1;
       synthESP32_setMVol(master_vol);
+      // Send MIDI CC for master volume
+      midiSendCC(1, 7, map(master_vol, 0, 127, 0, 127));
     } else if (selected_rot==10){
       ztranspose=counter1;
       // cambiar pitch en melodic
@@ -77,10 +79,15 @@ void do_rot(){
       }
       ROTvalue[selected_sound][selected_rot]=counter1;
       setSound(selected_sound);
+      
+      // Send MIDI CC for parameter changes
+      midiSendParameterChange(selected_sound, selected_rot, counter1);
 
       // play sound if
       if (selected_rot<8 && !playing){
         synthESP32_TRIGGER(selected_sound);
+        // Send MIDI note when auditioning sound
+        midiSendPadTrigger(selected_sound, 100);
       }
     }
 
@@ -175,7 +182,9 @@ void READ_POTS(){
     //Serial.println(adc2);
     master_vol=adc2;
     synthESP32_setMVol(master_vol);
-    drawBar(9);    
+    drawBar(9);
+    // Send MIDI CC for master volume from pot
+    midiSendCC(1, 7, map(master_vol, 0, 127, 0, 127));
   }
   
   if (adc3!=old_adc3){
@@ -185,6 +194,8 @@ void READ_POTS(){
     master_filter=adc3;
     synthESP32_setMFilter(master_filter);
     drawBar(11);
+    // Send MIDI CC for master filter from pot
+    midiSendCC(1, 74, map(master_filter, 0, 127, 0, 127));
   }
 
 }
