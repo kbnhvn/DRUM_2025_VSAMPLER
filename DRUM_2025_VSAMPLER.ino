@@ -46,6 +46,10 @@ extern void do_rot();
 //#define mylcd_type1
 #define mylcd_type2
 
+extern void LCD_clearWorkArea();
+extern void LCD_drawTitle(const char*);
+extern void drawScreen1_ONLY1();
+
 int32_t muestra;
 #define SAMPLE_RATE 44100         // Frecuencia de muestreo (44.1 kHz)
 
