@@ -1,6 +1,6 @@
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
-#include <MIDIUSB.h>
+#include <USB-MIDI.h>
 
 Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
