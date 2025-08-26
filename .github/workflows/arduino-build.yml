@@ -29,6 +29,7 @@ jobs:
       - name: Install Libraries
         run: |
           arduino-cli lib install "GFX Library for Arduino"
+          arduino-cli lib install "Dev Device Pins"
           arduino-cli lib install "ESP32-audioI2S-master"
           arduino-cli lib install "uClock"
           arduino-cli lib install "ESPAsyncWebServer"
