@@ -18,7 +18,7 @@ void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
-extern struct WavHeader {
+struct WavHeader {
   uint32_t sampleRate;
   uint16_t bitsPerSample;
   uint16_t numChannels;
