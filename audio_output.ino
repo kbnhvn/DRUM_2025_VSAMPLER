@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "driver/i2s.h"
 
-enum AudioOut { AUDIO_JACK=0, AUDIO_SPK=1 };
 static AudioOut g_audioOut = AUDIO_JACK;
 static uint8_t  g_volJack  = 80;  // 0..100 (WM8731)
 static uint8_t  g_volSpk   = 80;  // 0..100 (gain logiciel)

@@ -18,13 +18,13 @@ void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
-struct WavHeader {
-  uint32_t sampleRate;
-  uint16_t bitsPerSample;
-  uint16_t numChannels;
-  uint32_t dataBytes;
-};
-extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
+// struct WavHeader {
+//   uint32_t sampleRate;
+//   uint16_t bitsPerSample;
+//   uint16_t numChannels;
+//   uint32_t dataBytes;
+// };
+// extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
 
 // Hooks synth utilisés par keys.ino / midi.ino
 void synthESP32_TRIGGER(int nkey);
@@ -39,6 +39,7 @@ volatile bool    shiftR1   = false, shifting = false;
 volatile int16_t counter1  = 0,     old_counter1 = 0;
 
 extern void select_rot();
+extern void do_rot();
 
 //#define TESTING 1
 
@@ -725,7 +726,6 @@ void setup() {
 
 //........................................................................................................................
 // LCD and TOUCH
-  gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED, 0, true);
   // Init Display
   if (!gfx->begin())
   // if (!gfx->begin(80000000)) /* specify data bus speed */
