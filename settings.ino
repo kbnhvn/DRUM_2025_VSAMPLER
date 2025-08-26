@@ -6,7 +6,8 @@ extern void LCD_drawButtonsRow(std::initializer_list<const char*>);
 extern void LCD_drawSmallText(int,int,const char*); extern void LCD_toast(const char*);
 extern int LCD_buttonIndex(int); extern uint8_t trigger_on[48];
 
-extern void AudioOut_setRoute(int); extern void AudioOut_setVolume(uint8_t);
+extern void AudioOut_setRoute(int); 
+extern void AudioOut_setVolume(uint8_t);
 extern uint8_t g_midiChannel;
 extern void WIFI_enter(); // si besoin
 

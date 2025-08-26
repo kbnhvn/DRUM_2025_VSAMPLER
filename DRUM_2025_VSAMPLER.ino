@@ -14,17 +14,17 @@
 // ===== Types & Protos partagés (visibles pour tous les .ino agrégés) =====
 // Routage audio
 enum AudioOut : uint8_t { AUDIO_JACK = 0, AUDIO_SPK = 1 };
-void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
+extern void AudioOut_setRoute(AudioOut r);
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
-// struct WavHeader {
-//   uint32_t sampleRate;
-//   uint16_t bitsPerSample;
-//   uint16_t numChannels;
-//   uint32_t dataBytes;
-// };
-// extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
+struct WavHeader {
+  uint32_t sampleRate;
+  uint16_t bitsPerSample;
+  uint16_t numChannels;
+  uint32_t dataBytes;
+};
+void writeWavHeader(fs::File& f, const WavHeader& h); // declaration only
 
 // Hooks synth utilisés par keys.ino / midi.ino
 void synthESP32_TRIGGER(int nkey);
@@ -930,6 +930,18 @@ void loop() {
     } 
   }
 
+}
+
+// === Pont de compat pour le menu principal ===
+extern void LCD_clearWorkArea();
+extern void LCD_drawTitle(const char*);
+extern void drawScreen1_ONLY1();
+
+void Sampler_enter() {
+  // Si le menu change déjà currentPage, on peut juste rafraîchir l’UI ici.
+  LCD_clearWorkArea();
+  LCD_drawTitle("Sampler");
+  drawScreen1_ONLY1();
 }
 
 

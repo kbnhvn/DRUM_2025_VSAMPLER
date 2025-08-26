@@ -27,7 +27,7 @@ void midiUSB_begin(){
 
 // Hooks à connecter à ton moteur si besoin
 extern void synthESP32_TRIGGER(int nkey);
-extern void synthESP32_TRIGGER_P(int nkey, int ppitch);
+extern void synthESP32_TRIGGER_P(uint8_t nkey, int ppitch);
 extern uint8_t melodic[16][16];
 extern uint16_t pattern[16];
 extern byte selected_sound;

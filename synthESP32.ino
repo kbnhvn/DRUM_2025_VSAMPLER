@@ -278,9 +278,9 @@ void synthESP32_TRIGGER(int nkey){
   latch[nkey] = 1;
 }
 
-void synthESP32_TRIGGER_P(int nkey, int ppitch){
+void synthESP32_TRIGGER_P(uint8_t nkey, int ppitch){
 
-  if (nkey < 0) return; 
+  if ((int)nkey < 0) return;
   
   if (ROTvalue[nkey][4]==1) {
     samplePos[nkey] = ((uint64_t)NEWENDS[ROTvalue[nkey][0]]) << 16; // reinicia desde newinis
