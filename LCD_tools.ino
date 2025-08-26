@@ -18,7 +18,7 @@
 // #define GREENYELLOW RGB565_GREENYELLOW
 // #define PALERED RGB565_PALERED
 
-extern Arduino_GFX *gfx;
+extern Arduino_NV3041A *gfx;
 
 #define OSCURO RGB565(20, 25, 20)
 #define ZGREEN RGB565(50, 90, 50)

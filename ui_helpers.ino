@@ -2,7 +2,7 @@
 
 // Dépendances déjà présentes dans ton projet
 extern int BPOS[48][4];     // [x,y,w,h]
-extern Arduino_GFX *gfx;    // instance d'affichage
+extern Arduino_NV3041A *gfx;    // instance d'affichage
 extern int LCD_W, LCD_H;    // 480 x 272
 
 // Reset zone et BPOS

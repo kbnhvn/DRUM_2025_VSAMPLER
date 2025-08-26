@@ -18,12 +18,12 @@ void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
-// struct WavHeader {
-//   uint32_t sampleRate;
-//   uint16_t bitsPerSample;
-//   uint16_t numChannels;
-//   uint32_t dataBytes;
-// };
+extern struct WavHeader {
+  uint32_t sampleRate;
+  uint16_t bitsPerSample;
+  uint16_t numChannels;
+  uint32_t dataBytes;
+};
 // extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
 
 // Hooks synth utilisés par keys.ino / midi.ino
@@ -32,7 +32,7 @@ void synthESP32_TRIGGER_P(uint8_t sound, int key);
 
 // === Afficheur : la lib Dev_Device_Pins fournit bus/gfx -> ne PAS redéfinir ici
 extern Arduino_DataBus *bus;
-extern Arduino_GFX     *gfx;
+extern Arduino_NV3041A *gfx;
 
 // === Encoders retirés : on laisse des symboles neutres pour l'ancien code clavier
 volatile bool    shiftR1   = false, shifting = false;

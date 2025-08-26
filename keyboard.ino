@@ -1,5 +1,5 @@
 extern int BPOS[48][4];
-extern Arduino_GFX *gfx;
+extern Arduino_NV3041A *gfx;
 extern int LCD_W, LCD_H;
 extern uint8_t trigger_on[48];
 
