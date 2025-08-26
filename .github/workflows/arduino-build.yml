@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Arduino CLI
-        uses: arduino/arduino-cli-action@v2
+        uses: arduino/arduino-cli-action@v3
         with:
           version: '1.3.0'  # Arduino CLI version
 
