@@ -15,6 +15,7 @@
 // Routage audio
 enum AudioOut : uint8_t { AUDIO_JACK = 0, AUDIO_SPK = 1 };
 extern void AudioOut_setRoute(AudioOut r);
+extern void AudioOut_setRoute(int r);
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
