@@ -42,10 +42,12 @@ jobs:
 
       - name: Compile the Sketch
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32s3 --build-property "build.partition=huge_app_3M" --build-property "build.psram=enabled" .
+          arduino-cli compile \
+          --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=16M \
+          .
       - name: Upload the Sketch
         run: |
-          arduino-cli upload --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled --port /dev/ttyUSB0 --verify
+          arduino-cli upload --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=16M --port /dev/ttyUSB0 --verify
 
       - name: Create Artifact for Flashing
         uses: actions/upload-artifact@v4
