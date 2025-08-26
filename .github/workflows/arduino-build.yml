@@ -14,12 +14,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Set up Arduino CLI
         uses: arduino/setup-arduino-cli@v2
         with:
           version: '1.3.0'
+
+      - name: Enable unsafe library installations
+        run: |
+          arduino-cli config set library.enable_unsafe_install true
 
       - name: Install ESP32 Core
         run: |
@@ -28,7 +32,7 @@ jobs:
 
       - name: Install Libraries
         run: |
-          arduino-cli lib install "Arduino_GFX"
+          arduino-cli lib install --git-url https://github.com/moononournation/Arduino_GFX.git
           arduino-cli lib install "uClock"
           arduino-cli lib install "ESPAsyncWebServer"
           arduino-cli lib install "AsyncTCP"
