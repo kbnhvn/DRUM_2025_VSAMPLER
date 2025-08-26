@@ -20,6 +20,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
           export PATH="$HOME/.arduino15/bin:$PATH"
+          export PATH="$PWD/bin:$PATH"  # Ajoute l'emplacement du binaire Arduino CLI à PATH
           arduino-cli version
 
       - name: Install ESP32 Board
@@ -46,7 +47,7 @@ jobs:
           arduino-cli upload --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled --save-persistent .
 
       - name: Create Artifact for Flashing
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: esp32-s3-firmware
           path: ./build/*.bin
