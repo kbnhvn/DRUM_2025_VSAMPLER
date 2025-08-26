@@ -36,7 +36,6 @@ jobs:
           arduino-cli lib install "AsyncTCP"
           arduino-cli lib install "Adafruit TinyUSB Library"
           arduino-cli lib install "MIDI Library"
-          arduino-cli lib install "USB-MIDI"
           arduino-cli lib install "Audio"
           arduino-cli lib install "U8g2"
           arduino-cli lib install "ArduinoJson"

@@ -1,8 +1,7 @@
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
-#include <USB-MIDI.h>
 
-// Crée une instance MIDI USB avec TinyUSB
+// Crée une instance MIDI USB avec Adafruit TinyUSB
 Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
 
@@ -16,7 +15,7 @@ static inline bool _chMatch(uint8_t ch) {
 }
 
 void midiUSB_begin(){
-  // Initialisation de l'USB
+  // Initialisation de l'USB avec TinyUSB
   USB.begin();
   delay(50);
   // Initialisation du MIDI USB (lecture omni)
