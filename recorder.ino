@@ -2,7 +2,8 @@
 #include "driver/i2s.h"
 
 // --- WAV header ---
-// struct WavHeader { uint32_t sampleRate; uint16_t bitsPerSample; uint16_t numChannels; uint32_t dataBytes; };
+struct WavHeader { uint32_t sampleRate; uint16_t bitsPerSample; uint16_t numChannels; uint32_t dataBytes; };
+
 static void writeWavHeader(File& f, const WavHeader& h) {
     f.write(reinterpret_cast<const uint8_t*>("RIFF"), 4);
     uint32_t cs = 36 + h.dataBytes;

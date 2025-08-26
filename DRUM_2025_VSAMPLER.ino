@@ -18,12 +18,12 @@ void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
 enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
 
 // WAV header (+ écriture)
-struct WavHeader {
-  uint32_t sampleRate;
-  uint16_t bitsPerSample;
-  uint16_t numChannels;
-  uint32_t dataBytes;
-};
+// struct WavHeader {
+//   uint32_t sampleRate;
+//   uint16_t bitsPerSample;
+//   uint16_t numChannels;
+//   uint32_t dataBytes;
+// };
 // extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
 
 // Hooks synth utilisés par keys.ino / midi.ino
