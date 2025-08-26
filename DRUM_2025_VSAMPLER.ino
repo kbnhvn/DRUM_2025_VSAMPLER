@@ -9,6 +9,7 @@
 // includes
 #include <Arduino.h>
 #include <FS.h>
+#include <Arduino_GFX_Library.h>
 
 // ===== Types & Protos partagés (visibles pour tous les .ino agrégés) =====
 // Routage audio
@@ -23,7 +24,7 @@ struct WavHeader {
   uint16_t numChannels;
   uint32_t dataBytes;
 };
-void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
+extern void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
 
 // Hooks synth utilisés par keys.ino / midi.ino
 void synthESP32_TRIGGER(int nkey);
@@ -36,6 +37,8 @@ extern Arduino_GFX     *gfx;
 // === Encoders retirés : on laisse des symboles neutres pour l'ancien code clavier
 volatile bool    shiftR1   = false, shifting = false;
 volatile int16_t counter1  = 0,     old_counter1 = 0;
+
+extern void select_rot();
 
 //#define TESTING 1
 
@@ -614,7 +617,6 @@ bool playing     = false;
 bool pre_playing = false;
 bool songing     = false; // switch to make load auto patterns++
 bool recording   = false;
-bool shifting    = false;
 
 bool clearPADSTEP=false;
 bool clearPATTERNPADS=false;
@@ -723,6 +725,7 @@ void setup() {
 
 //........................................................................................................................
 // LCD and TOUCH
+  gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED, 0, true);
   // Init Display
   if (!gfx->begin())
   // if (!gfx->begin(80000000)) /* specify data bus speed */
