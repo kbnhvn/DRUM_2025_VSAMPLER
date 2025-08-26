@@ -39,6 +39,7 @@ jobs:
           arduino-cli lib install "Adafruit TinyUSB Library"
           arduino-cli lib install "MIDI Library"
           arduino-cli lib install "Audio"
+          arduino-cli lib install "U8g2"
 
       - name: Compile the Sketch
         run: |
