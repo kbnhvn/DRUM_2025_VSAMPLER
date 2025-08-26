@@ -19,8 +19,8 @@ jobs:
       - name: Set up Arduino CLI
         run: |
           curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-          echo "export PATH=\$HOME/.arduino15/bin:\$PATH" >> $GITHUB_ENV  # Ajout de l'emplacement à PATH
-          export PATH="$HOME/.arduino15/bin:$PATH"  # Modification de $PATH dans l'environnement actuel
+          echo "$HOME/arduino-cli:$PATH" >> $GITHUB_ENV   # Correct path update for $PATH
+          export PATH="$HOME/arduino-cli:$PATH"  # Update $PATH immediately for this session
           arduino-cli version
 
       - name: Install ESP32 Board
