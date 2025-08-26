@@ -42,8 +42,7 @@ jobs:
 
       - name: Compile the Sketch
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled .
-
+          arduino-cli compile --fqbn esp32:esp32:esp32s3 --build-property "build.partition=huge_app_3M" --build-property "build.psram=enabled" .
       - name: Upload the Sketch
         run: |
           arduino-cli upload --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled --port /dev/ttyUSB0 --verify
