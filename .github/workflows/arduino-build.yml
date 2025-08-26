@@ -1,0 +1,54 @@
+name: Arduino Build ESP32-S3
+
+on:
+  push:
+    branches:
+      - dev-v2
+  pull_request:
+    branches:
+      - dev-v2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Arduino CLI
+        uses: arduino/arduino-cli-action@v2
+        with:
+          version: '1.3.0'  # Arduino CLI version
+
+      - name: Install ESP32 Board
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.2.0  # Correct ESP32 core version for ESP32-S3
+
+      - name: Install Libraries
+        run: |
+          arduino-cli lib install "Arduino_GFX"
+          arduino-cli lib install "uClock"
+
+      - name: Install required libraries
+        run: |
+          arduino-cli lib install "ESPAsyncWebServer"
+          arduino-cli lib install "AsyncTCP"
+          arduino-cli lib install "Adafruit_TinyUSB"
+          arduino-cli lib install "MIDI"
+          arduino-cli lib install "Audio"
+
+      - name: Compile the project
+        run: |
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled .
+
+      - name: Archive the binary for manual flashing
+        run: |
+          arduino-cli upload --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled --save-persistent .
+          
+      - name: Create Artifact for Flashing
+        uses: actions/upload-artifact@v2
+        with:
+          name: esp32-s3-firmware
+          path: *.bin
