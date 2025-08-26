@@ -8,6 +8,34 @@
 
 // includes
 #include <Arduino.h>
+#include <FS.h>
+
+// ===== Types & Protos partagés (visibles pour tous les .ino agrégés) =====
+// Routage audio
+enum AudioOut : uint8_t { AUDIO_JACK = 0, AUDIO_SPK = 1 };
+void AudioOut_setRoute(enum AudioOut r);   // impl. dans audio_output.ino
+enum AudioOut AudioOut_getRoute(void);     // impl. dans audio_output.ino
+
+// WAV header (+ écriture)
+struct WavHeader {
+  uint32_t sampleRate;
+  uint16_t bitsPerSample;
+  uint16_t numChannels;
+  uint32_t dataBytes;
+};
+void writeWavHeader(fs::File& f, const WavHeader& h); // impl. dans recorder.ino
+
+// Hooks synth utilisés par keys.ino / midi.ino
+void synthESP32_TRIGGER(int nkey);
+void synthESP32_TRIGGER_P(uint8_t sound, int key);
+
+// === Afficheur : la lib Dev_Device_Pins fournit bus/gfx -> ne PAS redéfinir ici
+extern Arduino_DataBus *bus;
+extern Arduino_GFX     *gfx;
+
+// === Encoders retirés : on laisse des symboles neutres pour l'ancien code clavier
+volatile bool    shiftR1   = false, shifting = false;
+volatile int16_t counter1  = 0,     old_counter1 = 0;
 
 //#define TESTING 1
 
@@ -38,7 +66,6 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 //String soundFiles[MAX_SOUNDS];
 
 ////////////////////////////// SPIFFS
-#include <FS.h>
 #include <SPIFFS.h>
 
 ////////////////////////////// SYNTH
@@ -58,11 +85,7 @@ const String tbuttons2[8]       = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10
 #include <Arduino_GFX_Library.h>
 #define GFX_DEV_DEVICE ESP32_4827A043_QSPI
 #define GFX_BL 1
-Arduino_DataBus *bus = new Arduino_ESP32QSPI(45 /* cs */, 47 /* sck */, 21 /* d0 */, 48 /* d1 */, 40 /* d2 */, 39 /* d3 */);
-//Arduino_DataBus *bus = new Arduino_ESP32SPI(TFT_DC, TFT_CS, TFT_SCK /* SCK */, TFT_MOSI /* MOSI */, GFX_NOT_DEFINED /* MISO */, HSPI /* spi_num */);
-// 320x240
-//Arduino_GFX *gfx = new Arduino_ST7789(bus, TFT_RST, 1 /* rotation */);
-Arduino_GFX *gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED /* RST */, 0 /* rotation */, true /* IPS */);
+
 #ifdef ESP32
 #undef F
 #define F(s) (s)

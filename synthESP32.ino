@@ -1,3 +1,6 @@
+void synthESP32_TRIGGER(int nkey);
+void synthESP32_TRIGGER_P(uint8_t sound, int key);
+
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
     8.18, 8.66, 9.18, 9.72, 10.3, 10.91, 11.56, 12.25, 12.98, 13.75, 14.57, 15.43,

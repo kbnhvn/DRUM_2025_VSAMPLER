@@ -3,7 +3,7 @@ extern Arduino_GFX *gfx;
 extern int LCD_W, LCD_H;
 extern uint8_t trigger_on[48];
 
-#include "ui_helpers.ino"
+// #include "ui_helpers.ino"
 
 extern volatile PageId currentPage;
 extern uint8_t g_midiChannel;

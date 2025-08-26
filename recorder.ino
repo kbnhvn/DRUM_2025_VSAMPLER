@@ -80,7 +80,8 @@ void Recorder_loop(){
     if (rb>0){ recFile.write((uint8_t*)rxBuf,rb); recBytes+=rb;
       int n=rb/4; int32_t accL=0,accR=0; int16_t* p=(int16_t*)rxBuf;
       for(int i=0;i<n;i++){ int16_t L=*p++,R=*p++; accL+=L*L; accR+=R*R; }
-      vuL=sqrtf((float)accL/n)>>8; vuR=sqrtf((float)accR/n)>>8;
+        vuL = (uint16_t)(sqrtf((float)accL / n)) >> 8;
+        vuR = (uint16_t)(sqrtf((float)accR / n)) >> 8;
       recDurMs=millis()-recStartMs;
     }
   }

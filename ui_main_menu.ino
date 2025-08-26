@@ -3,7 +3,7 @@ extern Arduino_GFX *gfx;
 extern int LCD_W, LCD_H;
 extern uint8_t trigger_on[48];
 
-#include "ui_helpers.ino"
+// #include "ui_helpers.ino"
 
 // Enum pages (déjà ajoutée via diff dans DRUM_2025_VSAMPLER.ino)
 extern volatile PageId currentPage;

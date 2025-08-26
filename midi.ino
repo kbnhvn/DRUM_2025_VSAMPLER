@@ -1,5 +1,8 @@
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
+#if __has_include(<USB.h>)
+#  include <USB.h>      // fourni par l'ESP32 core (TinyUSB device)
+#endif
 
 // Crée une instance MIDI USB avec Adafruit TinyUSB
 Adafruit_USBD_MIDI usb_midi;
@@ -15,11 +18,11 @@ static inline bool _chMatch(uint8_t ch) {
 }
 
 void midiUSB_begin(){
-  // Initialisation de l'USB avec TinyUSB
+#if __has_include(<USB.h>)
   USB.begin();
+#endif
   delay(50);
-  // Initialisation du MIDI USB (lecture omni)
-  MIDI_USB.begin(MIDI_CHANNEL_OMNI); 
+  MIDI_USB.begin(MIDI_CHANNEL_OMNI); // lecture omni, on filtre nous-mêmes
 }
 
 // Hooks à connecter à ton moteur si besoin
