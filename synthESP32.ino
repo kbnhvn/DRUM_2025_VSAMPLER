@@ -160,7 +160,9 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
 
 static void audio_task(void *userData){
   while(1) {
-      write_buffer();      
+      write_buffer();  
+      extern void recorder_poll();
+      recorder_poll(); // no-op si pas d’enreg. en cours    
   }
 } 
 

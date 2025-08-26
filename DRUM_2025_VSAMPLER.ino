@@ -13,9 +13,6 @@
 
 //#define mylcd_type1
 #define mylcd_type2
-// if you don't have a ADS1115 and rotary comment next line
-//#define ads_ok
-
 
 int32_t muestra;
 #define SAMPLE_RATE 44100         // Frecuencia de muestreo (44.1 kHz)
@@ -40,41 +37,9 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 // Array para almacenar los nombres de los archivos WAV
 //String soundFiles[MAX_SOUNDS];
 
-/////////////////////////////// I2C POTS ADS1015
-#include <Adafruit_ADS1X15.h>
-#ifdef mylcd_type1
-  #define SDA_2 15  
-  #define SCL_2 16 
-#endif
-#ifdef mylcd_type2
-  #define SDA_2 17  
-  #define SCL_2 18 
-#endif
-
-TwoWire I2C_2 = TwoWire(1); // 2nd I2C port
-Adafruit_ADS1015 ads;
-int16_t adc0=0;
-int16_t adc1=0;
-int16_t adc2=0;
-int16_t adc3=0; 
-int16_t tmp_adc1;
-int16_t old_adc0=0;
-int16_t old_adc1=0;
-int16_t old_adc2=0;
-int16_t old_adc3=0;
-
-unsigned long previousMillis = 0;
-const long interval = 100; 
-
-int16_t adcValue0 = 0;
-int16_t adcValue1 = 0;
-int16_t adcValue2 = 0;
-int16_t adcValue3 = 0;
-
 ////////////////////////////// SPIFFS
 #include <FS.h>
 #include <SPIFFS.h>
-
 
 ////////////////////////////// SYNTH
 //#define SAMPLE_RATE 44100
@@ -495,9 +460,18 @@ int master_vol=80;
 int master_filter=0;
 int octave=5;
 
-////////////////////////////// MIDI USB
-//Adafruit_USBD_MIDI usb_midi;
-//MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+////////////////////////////// MIDI USB (géré dans midi.ino)
+void midiUSB_begin();
+void midiUSB_poll();
+extern uint8_t g_midiChannel;
+
+// === Navigation par pages (utilisées par ui_main_menu.ino & co) ===
+enum PageId { PAGE_MAIN=0, PAGE_SAMPLER, PAGE_RECORDER, PAGE_FILES, PAGE_SETTINGS, PAGE_WIFI, PAGE_SETTINGS_MIDI };
+volatile PageId currentPage = PAGE_MAIN;
+int LCD_W = 480;   // mis à jour après init écran
+int LCD_H = 272;   // idem
+void MainMenu_enter();  // défini dans ui_main_menu.ino
+void MainMenu_loop();
 
 ////////////////////////////// SEQ 
 int bpm=120;
@@ -578,23 +552,6 @@ const char* nombresEscalas[] = {
   "Mixolidio",
   "Locrio"
 };
-////////////////////////////// ROTARY
-#ifdef mylcd_type1 
-  #define CLK 9 // CLK ENCODER 
-  #define DT 14 // DT ENCODER
-  const byte pinBR1=5;
-#endif
-#ifdef mylcd_type2 
-  #define CLK 7 // CLK ENCODER 
-  #define DT 6 // DT ENCODER
-  const byte pinBR1=15;
-#endif
-
-byte ENC_PORT1=0;
-int counter1=0;
-int old_counter1=0;
-byte shiftR1=false;
-byte old_shiftR1=true;
 
 // 8 sound parameters + bpm + master vol + transpose + master filter + octave + Pattern song selector + Sync mode
 const int max_values[16]={49,2047,2047,127,1,127, 127,127,400,127, 1,127,20, 1,2,12}; 
@@ -737,30 +694,10 @@ void setup() {
   Serial.begin(115200);
   delay(500);
   randomSeed(analogRead(0));
-  // // FX
-  // if (!psramFound()) {
-  //   Serial.println("¡PSRAM no detectada!");
-  //   while (1);
-  // }
-
-  // if (!initAudioFX()) {
-  //   Serial.println("Error inicializando efectos");
-  //   while (1);
-  // }
   
   // Iniciar el primer puerto I2C
   Wire.begin(TOUCH_SDA, TOUCH_SCL,400000);
-  #ifdef ads_ok
-  // Iniciar el segundo puerto I2C
-  I2C_2.begin(SDA_2, SCL_2, 400000);
 
-  // Iniciar el ADS1015 en el segundo puerto I2C
-  if (!ads.begin(0x48, &I2C_2)) { // Dirección I2C por defecto del ADS1015/ADS1115
-    Serial.println("ADS1015 not found.");
-  } else {
-    Serial.println("ADS1015 init OK.");
-  }
-  #endif
 //........................................................................................................................
 // LCD and TOUCH
   // Init Display
@@ -778,6 +715,8 @@ void setup() {
 
   gfx->setFont(u8g2_font_5x8_mr);
   gfx->setUTF8Print(true);
+  LCD_W = gfx->width();
+  LCD_H = gfx->height();
   
   fillBPOS();
   drawScreen1_ONLY1();
@@ -798,6 +737,10 @@ void setup() {
 //  if ( !TinyUSBDevice.mounted() ){
 //    Serial.println("Error USB");
 //  }
+  // ==== MIDI USB ====
+  midiUSB_begin();
+ 
+  MainMenu_enter(); currentPage = PAGE_MAIN;
 
 
   // Synth
@@ -862,12 +805,6 @@ void setup() {
 //    sstep=firstStep;
 //    refreshPADSTEP=true; 
 //    playing=true;
-  #ifdef ads_ok
-  // Rotary
-  pinMode(pinBR1,INPUT_PULLUP);
-  pinMode(CLK,INPUT_PULLUP);
-  pinMode(DT,INPUT_PULLUP);
-  #endif
 //........................................................................................................................
 //
 //   B L E M I D I
@@ -896,6 +833,8 @@ void setup() {
 //////////////////////////////  L O O P  //////////////////////////////
 
 void loop() {
+   // MIDI USB polling (transport / notes / clock)
+   midiUSB_poll();
 
   // flag to do things outside sequencer timer isr
   if (load_flag){
@@ -915,56 +854,43 @@ void loop() {
     refreshPADSTEP=true;
   }
 
-  // if (sync_flag){ 
-  //     sync_flag=false;
-  //     if (sync_state==1){   // if this machine is master
-  //       Serial1.write(11);
-  //     }
-  // }
-  // if (sync_state==2){ // if this machine is slave
-  //   if (Serial1.available() > 0){
-  //     byte var=Serial1.read();
-  //     if (var==11){
-  //       if (pre_playing){
-  //         sstep=firstStep;
-  //         pre_playing=false;
-  //         uClock.start();
-  //         refreshPADSTEP=true;          
-  //       }
-  //     }
-  //   }
-  // }
-
-  // Read MIDI ports
-  //MIDI.read();
-  #ifdef ads_ok
-  shiftR1=!digitalRead(pinBR1);
-  #endif
-
-  // if (shiftR1!=old_shiftR1){
-  //   old_shiftR1=shiftR1;
-  //   drawScreen1b();
-  //   //Serial.println(shiftR1);
-  //   if (!shiftR1) refreshPATTERN=true;
-  // }
-  #ifdef ads_ok
-  READ_ENCODERS();
-  #endif
+  // === Touch toujours actif pour dispatcher les pages ===
   read_touch();
-  DO_KEYPAD();
-  REFRESH_KEYS();
-  REFRESH_STATUS();
 
-  showLastTouched();
-  clearLastTouched();
-  
-  #ifdef ads_ok
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    READ_POTS(); 
+  // === Dispatcher des pages ===
+  switch (currentPage) {
+    case PAGE_MAIN:
+      MainMenu_loop();
+      break;
+    case PAGE_SAMPLER:
+      // ——— UI sampler d’origine ———
+      DO_KEYPAD();
+      REFRESH_KEYS();
+      REFRESH_STATUS();
+      showLastTouched();
+      clearLastTouched();
+      break;
+    case PAGE_RECORDER:
+      extern void Recorder_loop();
+      Recorder_loop();
+      break;
+    case PAGE_FILES:
+      extern void Files_loop();
+      Files_loop();
+      break;
+    case PAGE_SETTINGS:
+      extern void Settings_loop();
+      Settings_loop();
+      break;
+    case PAGE_SETTINGS_MIDI:
+      extern void SettingsMIDI_loop();
+      SettingsMIDI_loop();
+      break;
+    case PAGE_WIFI:
+      extern void WIFI_loop();
+      WIFI_loop();
+      break;
   }
-  #endif
 
   // Weird code!!!! Segunda carga de setsoud porque con la primera no se generan bien el inicio y el fin de sample y el volumen/pan. Parece que no le da tiempo.
   if (flag_ss=true){
