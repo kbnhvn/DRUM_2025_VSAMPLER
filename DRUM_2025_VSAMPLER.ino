@@ -933,9 +933,6 @@ void loop() {
 }
 
 // === Pont de compat pour le menu principal ===
-extern void LCD_clearWorkArea();
-extern void LCD_drawTitle(const char*);
-extern void drawScreen1_ONLY1();
 
 void Sampler_enter() {
   // Si le menu change déjà currentPage, on peut juste rafraîchir l’UI ici.
