@@ -47,7 +47,7 @@ jobs:
           arduino-cli upload --fqbn esp32:esp32:esp32s3:partition=huge_app_3M,psram=enabled --save-persistent .
 
       - name: Create Artifact for Flashing
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: esp32-s3-firmware
           path: ./build/*.bin
