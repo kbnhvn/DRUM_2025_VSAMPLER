@@ -3,15 +3,25 @@
 
 // --- WAV header ---
 struct WavHeader { uint32_t sampleRate; uint16_t bitsPerSample; uint16_t numChannels; uint32_t dataBytes; };
-static void writeWavHeader(File& f, const WavHeader& h){
-  f.write("RIFF",4); uint32_t cs=36+h.dataBytes; f.write((uint8_t*)&cs,4); f.write("WAVE",4);
-  f.write("fmt ",4); uint32_t sc1=16; f.write((uint8_t*)&sc1,4);
-  uint16_t fmt=1; f.write((uint8_t*)&fmt,2);
-  f.write((uint8_t*)&h.numChannels,2); f.write((uint8_t*)&h.sampleRate,4);
-  uint32_t br=h.sampleRate*h.numChannels*(h.bitsPerSample/8); f.write((uint8_t*)&br,4);
-  uint16_t ba=h.numChannels*(h.bitsPerSample/8); f.write((uint8_t*)&ba,2);
-  f.write((uint8_t*)&h.bitsPerSample,2);
-  f.write("data",4); f.write((uint8_t*)&h.dataBytes,4);
+static void writeWavHeader(File& f, const WavHeader& h) {
+    f.write(reinterpret_cast<const uint8_t*>("RIFF"), 4);
+    uint32_t cs = 36 + h.dataBytes;
+    f.write(reinterpret_cast<const uint8_t*>(&cs), 4);
+    f.write(reinterpret_cast<const uint8_t*>("WAVE"), 4);
+    f.write(reinterpret_cast<const uint8_t*>("fmt "), 4);
+    uint32_t sc1 = 16;
+    f.write(reinterpret_cast<const uint8_t*>(&sc1), 4);
+    uint16_t fmt = 1;
+    f.write(reinterpret_cast<const uint8_t*>(&fmt), 2);
+    f.write(reinterpret_cast<const uint8_t*>(&h.numChannels), 2);
+    f.write(reinterpret_cast<const uint8_t*>(&h.sampleRate), 4);
+    uint32_t br = h.sampleRate * h.numChannels * (h.bitsPerSample / 8);
+    f.write(reinterpret_cast<const uint8_t*>(&br), 4);
+    uint16_t ba = h.numChannels * (h.bitsPerSample / 8);
+    f.write(reinterpret_cast<const uint8_t*>(&ba), 2);
+    f.write(reinterpret_cast<const uint8_t*>(&h.bitsPerSample), 2);
+    f.write(reinterpret_cast<const uint8_t*>("data"), 4);
+    f.write(reinterpret_cast<const uint8_t*>(&h.dataBytes), 4);
 }
 
 // --- State ---
