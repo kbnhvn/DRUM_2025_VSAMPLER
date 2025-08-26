@@ -36,7 +36,7 @@ jobs:
           arduino-cli lib install "uClock"
           arduino-cli lib install "ESPAsyncWebServer"
           arduino-cli lib install "AsyncTCP"
-          arduino-cli lib install "Adafruit_TinyUSB"
+          arduino-cli lib install "Adafruit TinyUSB Library"
           arduino-cli lib install "MIDI"
           arduino-cli lib install "Audio"
 
