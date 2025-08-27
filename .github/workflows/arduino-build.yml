@@ -33,6 +33,11 @@ jobs:
           arduino-cli lib install "Adafruit ADS1X15"
           arduino-cli lib install "U8g2"
 
+      - name: Copy custom partitions file
+        run: |
+          mkdir -p /home/runner/.arduino15/packages/esp32/hardware/esp32/3.2.0/tools/partitions
+          cp ./custom_partitions.csv /home/runner/.arduino15/packages/esp32/hardware/esp32/3.2.0/tools/partitions/
+
       - name: Compile the Sketch
         run: |
           arduino-cli compile \
