@@ -1,4 +1,3 @@
-// ui_lvgl_compat.ino
 #include <lvgl.h>
 
 // ==== pont vers ta logique existante ====

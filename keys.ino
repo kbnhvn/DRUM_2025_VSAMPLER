@@ -1,3 +1,7 @@
+// ==== LVGL port: stubs d'ancienne UI ====
+static inline void draw8aBar() {}          // ancien rafraîchissement de barres
+static inline void refresh_shift_key() {}  // ancien rafraîchissement bouton SHIFT
+static inline void drawBar(int) {}         // ancien dessin d'une barre
 
 void DO_KEYPAD(){
 

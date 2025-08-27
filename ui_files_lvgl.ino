@@ -2,7 +2,7 @@
 #include <lvgl.h>
 #include <SD.h>
 
-extern "C" bool loadWavToSlot(const char* path, uint8_t slot);
+extern bool loadWavToSlot(const char* path, uint8_t slot);
 extern uint8_t selected_sound;
 
 // Clavier LVGL (tab ui_kb_lvgl.ino)
@@ -46,7 +46,8 @@ static void refresh_files(){
 
       // 1) Click : charge aussi dans le slot courant ET sélectionne l’item
       lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-        const char* name = lv_list_get_button_text(list_files, lv_event_get_target(ev));
+        lv_obj_t* btn = lv_event_get_target_obj(ev);
+        const char* name = lv_list_get_button_text(list_files, btn);
         if (!name) return;
         set_selected(name);
         loadWavToSlot(g_selected_full, selected_sound);
@@ -54,7 +55,8 @@ static void refresh_files(){
 
       // 2) Long press : ne charge pas, ne fait que sélectionner
       lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-        const char* name = lv_list_get_button_text(list_files, lv_event_get_target(ev));
+        lv_obj_t* btn = lv_event_get_target_obj(ev);
+        const char* name = lv_list_get_button_text(list_files, btn);
         if (!name) return;
         set_selected(name);
       }, LV_EVENT_LONG_PRESSED, NULL);

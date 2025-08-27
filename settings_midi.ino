@@ -4,8 +4,9 @@ extern int LCD_W, LCD_H;
 extern uint8_t trigger_on[48];
 
 // #include "ui_helpers.ino"
-
-extern volatile PageId currentPage;
+// LVGL navigation: plus de PageId; on appelle une view
+extern void build_settings_view();  // si tu as une view settings LVGL
+extern void build_main_menu();
 extern uint8_t g_midiChannel;
 
 // persist
@@ -48,7 +49,8 @@ void SettingsMIDI_loop(){
     else if (o==2){
       Settings_save_midi();
       LCD_toast("MIDI channel saved");
-      currentPage=PAGE_SETTINGS; // retourne sur Settings généraux si tu as une page
+      // Retour vers l'UI LVGL Settings (ou main menu si pas de view dédiée)
+      if(build_settings_view) build_settings_view(); else build_main_menu();
       // si tu n'as pas de page Settings, remets PAGE_MAIN :
       // currentPage=PAGE_MAIN;
     }

@@ -123,6 +123,11 @@ extern "C" {
   void     rec_edit_set_speed(float speed1x);
   void     rec_edit_set_pitch_semitones(float semi);
   bool     rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch);
+
+  // --- Wrappers compat UI (anciens noms) ---
+  void     rec_set_speed_percent(int pct);
+  void     rec_set_pitch_semitones(int semis);
+  void     rec_set_region(uint32_t startMs, uint32_t stopMs);
 }
 
 // NB : l’acquisition I2S n’est pas ré-implémentée ici (tu as déjà audio_hal/i2s côté projet).
@@ -231,6 +236,19 @@ void rec_edit_set_pitch_semitones(float semi){
   s_editPitchSemi = semi;
 }
 
+// === Wrappers compat ===
+void rec_set_speed_percent(int pct){
+  if (pct < 25)  pct = 25;
+  if (pct > 400) pct = 400;
+  rec_edit_set_speed(pct / 100.0f);
+}
+void rec_set_pitch_semitones(int semis){
+  rec_edit_set_pitch_semitones((float)semis);
+}
+void rec_set_region(uint32_t startMs, uint32_t stopMs){
+  rec_edit_set_range_ms(startMs, stopMs);
+}
+
 // Construit peaks (0..255) uniformément répartis sur la largeur demandée
 bool rec_build_waveform(const char* path, uint16_t target_points){
   s_wfCount = 0;
@@ -297,8 +315,9 @@ bool rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch){
   SD.remove(dstPath);
   File out = SD.open(dstPath, FILE_WRITE); if(!out){ src.close(); return false; }
 
-  // On va écrire un header bidon, puis corriger la taille à la fin
-  WavMeta outm; outm.channels=m.channels; outm.sampleRate=m.sampleRate; outm.bitsPerSample=16; outm.dataBytes=0;
+  // On sort toujours en stéréo pour simplifier (mono dupliqué sur R)
+  const uint16_t OUT_CH = 2;
+  WavMeta outm; outm.channels=OUT_CH; outm.sampleRate=m.sampleRate; outm.bitsPerSample=16; outm.dataBytes=0;
   wav_write_header(out, outm);
 
   // Position source au frame startF
@@ -341,11 +360,11 @@ bool rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch){
     int32_t Li = (int32_t)((1.0-t)*L0 + t*L1);
     int32_t Ri = (int32_t)((1.0-t)*R0 + t*R1);
 
+    // écrit stéréo: si source mono -> duplique L sur R
     out.write((uint8_t*)&Li,2);
     if (SRC_CH==2) out.write((uint8_t*)&Ri,2);
     else           out.write((uint8_t*)&Li,2);
-
-    outm.dataBytes += (SRC_CH==2)? 4 : 4; // on sort toujours stéréo (L dupliqué si mono)
+    outm.dataBytes += 4; // 2 canaux * 16 bits
     srcIndex += factor;
   }
 

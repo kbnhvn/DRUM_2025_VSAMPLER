@@ -3,8 +3,6 @@
 #include <WiFi.h>
 
 static lv_obj_t* scr_wifi;
-static lv_obj_t* list_ssid;
-static lv_obj_t* lbl_status;
 static lv_timer_t* tmr_conn = nullptr;
 
 static lv_obj_t* list_ssid = nullptr;
@@ -51,7 +49,7 @@ static void kb_ok_handler(const char* txt){
   kb_close();
 }
 
-static void kb_cancel_handler(){ kb_close(); }
+static void kb_cancel_handler(){ /* le prompt se ferme côté implémentation */ }
 
 static void open_keyboard_for_pass(const char* ssid){
   strncpy(g_selected_ssid, ssid, sizeof(g_selected_ssid)-1);
