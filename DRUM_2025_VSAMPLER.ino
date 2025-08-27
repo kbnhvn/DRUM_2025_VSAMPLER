@@ -689,7 +689,6 @@ bool refreshMODES=true;
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println(LVGL_Arduino);
   randomSeed(analogRead(0));
 
   // Fichiers / réglages
@@ -717,7 +716,7 @@ void setup() {
 
 void loop() {
   // UI LVGL
-  lv_timer_handler()
+  lv_timer_handler();
 
   // Moteur existant
   midiUSB_poll();
