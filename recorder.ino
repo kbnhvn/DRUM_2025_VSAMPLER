@@ -51,7 +51,7 @@ static float    s_editPitchSemi  = 0.0f;    // en demi-tons (±12, etc.)
 // ======================  WAV helpers  ==========================
 // ===============================================================
 
-static bool wav_read_header(File &f, const WavMeta &m){
+static bool wav_read_header(File &f, WavMeta &m){
   auto rd32=[&](uint32_t &v){ return f.read((uint8_t*)&v,4)==4; };
   auto rd16=[&](uint16_t &v){ return f.read((uint8_t*)&v,2)==2; };
 
