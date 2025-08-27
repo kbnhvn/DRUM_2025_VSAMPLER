@@ -20,6 +20,9 @@ struct WavMeta {
   WavMeta() : channels(1), sampleRate(44100), bitsPerSample(16), dataOffset(0), dataBytes(0) {}
 };
 
+static bool wav_read_header(File &f, WavMeta &m);
+static void wav_write_header(File &out, const WavMeta &m);
+
 // ---------- CONFIG ----------
 static const char* kRecTmpPath = "/samples/rec_tmp.wav";
 static const uint16_t WF_MAX_POINTS = 480;     // nb max de points de peak pour l'UI (≈ largeur écran)
@@ -48,7 +51,7 @@ static float    s_editPitchSemi  = 0.0f;    // en demi-tons (±12, etc.)
 // ======================  WAV helpers  ==========================
 // ===============================================================
 
-static bool wav_read_header(File &f, WavMeta &m){
+static bool wav_read_header(File &f, const WavMeta &m){
   auto rd32=[&](uint32_t &v){ return f.read((uint8_t*)&v,4)==4; };
   auto rd16=[&](uint16_t &v){ return f.read((uint8_t*)&v,2)==2; };
 
