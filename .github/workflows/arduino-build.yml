@@ -3,10 +3,10 @@ name: Build and Test Arduino Sketch
 on:
   push:
     branches:
-      - dev-v2
+      - lvgl
   pull_request:
     branches:
-      - dev-v2
+      - lvgl
 
 jobs:
   build:
@@ -37,8 +37,9 @@ jobs:
           arduino-cli lib install "Adafruit TinyUSB Library"
           arduino-cli lib install "MIDI Library"
           arduino-cli lib install "Audio"
-          arduino-cli lib install "U8g2"
+          arduino-cli lib install "lvgl"
           arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "TAMC_GT911"
 
       - name: Compile the Sketch
         run: |

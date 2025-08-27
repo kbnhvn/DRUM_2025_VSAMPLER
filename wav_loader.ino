@@ -1,5 +1,7 @@
 #include <SD.h>
 
+extern "C" bool loadWavToSlot(const char* path, uint8_t slot);
+
 struct SampleSlot {
   int16_t* data=nullptr;
   uint32_t frames=0;

@@ -1,15 +1,22 @@
-////////////////////////////
-// DRUM SAMPLER 2025      //
-////////////////////////////
-// ZCARLOS 2025
-// V002 beta
-
-// Lots of bugs
-
 // includes
 #include <Arduino.h>
 #include <FS.h>
-#include <Arduino_GFX_Library.h>
+#include <lvgl.h>
+
+// externs déjà existants dans tes autres .ino :
+extern void audio_output_init();
+extern void synthESP32_begin();
+extern void midiUSB_begin();
+extern void midiUSB_poll();
+extern void sequencer_tick();
+extern void settings_load();
+extern void files_init();
+extern void setSound(byte f);
+
+// LVGL (selon ta conf JC4827W543)
+extern void lv_port_init();
+extern void build_main_menu();
+extern void build_vsampler_view();
 
 // ===== Types & Protos partagés (visibles pour tous les .ino agrégés) =====
 // Routage audio
@@ -31,25 +38,12 @@ void writeWavHeader(fs::File& f, const WavHeader& h); // declaration only
 void synthESP32_TRIGGER(int nkey);
 void synthESP32_TRIGGER_P(uint8_t sound, int key);
 
-// === Afficheur : la lib Dev_Device_Pins fournit bus/gfx -> ne PAS redéfinir ici
-extern Arduino_DataBus *bus;
-extern Arduino_NV3041A *gfx;
-
 // === Encoders retirés : on laisse des symboles neutres pour l'ancien code clavier
 volatile bool    shiftR1   = false, shifting = false;
 volatile int16_t counter1  = 0,     old_counter1 = 0;
 
 extern void select_rot();
 extern void do_rot();
-
-//#define TESTING 1
-
-//#define mylcd_type1
-#define mylcd_type2
-
-extern void LCD_clearWorkArea();
-extern void LCD_drawTitle(const char*);
-extern void drawScreen1_ONLY1();
 
 int32_t muestra;
 #define SAMPLE_RATE 44100         // Frecuencia de muestreo (44.1 kHz)
@@ -88,24 +82,6 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 const String trot[16] = { "SAM", "INI", "END", "PIT", "RVS", "VOL", "PAN", "FIL", "BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"};
 const String tbuttons1[8]       = {"   PAD   ", "  RND P ", " LOAD PS ", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
 const String tbuttons2[8]       = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", "  + 1   ", "        ", "        ", "  SHIFT "};
-
-////////////////////////////// LCD 
-#include <U8g2lib.h>
-#include <Arduino_GFX_Library.h>
-#define GFX_DEV_DEVICE ESP32_4827A043_QSPI
-#define GFX_BL 1
-
-#ifdef ESP32
-#undef F
-#define F(s) (s)
-#endif
-
-///////////////////////////////// TOUCH
-#define GT911_ADDR 0x5D
-#define TOUCH_SDA 8
-#define TOUCH_SCL 4
-#define TOUCH_INT 3 // I'm not using interrupt
-#define TOUCH_RST 38
 
 //............................................................................
 // Buttons size properties
@@ -497,14 +473,6 @@ void midiUSB_begin();
 void midiUSB_poll();
 extern uint8_t g_midiChannel;
 
-// === Navigation par pages (utilisées par ui_main_menu.ino & co) ===
-enum PageId { PAGE_MAIN=0, PAGE_SAMPLER, PAGE_RECORDER, PAGE_FILES, PAGE_SETTINGS, PAGE_WIFI, PAGE_SETTINGS_MIDI };
-volatile PageId currentPage = PAGE_MAIN;
-int LCD_W = 480;   // mis à jour après init écran
-int LCD_H = 272;   // idem
-void MainMenu_enter();  // défini dans ui_main_menu.ino
-void MainMenu_loop();
-
 ////////////////////////////// SEQ 
 int bpm=120;
 byte selected_pattern=0;
@@ -720,231 +688,46 @@ bool refreshMODES=true;
 
 //////////////////////////////  S E T U P  //////////////////////////////
 void setup() {
-
-  // Serial
   Serial.begin(115200);
-  delay(500);
+  delay(200);
   randomSeed(analogRead(0));
-  
-  // Iniciar el primer puerto I2C
-  Wire.begin(TOUCH_SDA, TOUCH_SCL,400000);
 
-//........................................................................................................................
-// LCD and TOUCH
-  // Init Display
-  if (!gfx->begin())
-  // if (!gfx->begin(80000000)) /* specify data bus speed */
-  {
-    Serial.println("gfx->begin() failed!");
-  }
-  gfx->fillScreen(BLACK);
+  // Fichiers / réglages
+  files_init();
+  settings_load();
 
-  #ifdef GFX_BL
-    pinMode(GFX_BL, OUTPUT);
-    digitalWrite(GFX_BL, HIGH);
-  #endif
-
-  gfx->setFont(u8g2_font_5x8_mr);
-  gfx->setUTF8Print(true);
-  LCD_W = gfx->width();
-  LCD_H = gfx->height();
-  
-  fillBPOS();
-  drawScreen1_ONLY1();
-
-  // Touch
-  resetGT911();
-  delay(100);
-
-
-  // Serial 2
- // Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2);    //Hardware Serial of ESP32
-  
-  // MIDI USB
-//  MIDI.begin(MIDI_CHANNEL_OMNI);
-//  MIDI.setHandleNoteOn(handleNoteOn);  
-//  MIDI.setHandleControlChange(handleCC);
-//  // check device mounted
-//  if ( !TinyUSBDevice.mounted() ){
-//    Serial.println("Error USB");
-//  }
-  // ==== MIDI USB ====
-  midiUSB_begin();
- 
-  MainMenu_enter(); currentPage = PAGE_MAIN;
-
-
-  // Synth
+  // Audio / Synth / MIDI
+  audio_output_init();
   synthESP32_begin();
+  midiUSB_begin();
 
-  // Set 16 voices
-  for (byte f=0;f<16;f++){
-    setSound(f);
-  }
-  // Set master vol
-  synthESP32_setMVol(master_vol);
-  // Set master filter
-  synthESP32_setMFilter(master_filter);  
+  // Initialiser les 16 sons
+  for (byte f=0; f<16; ++f) setSound(f);
 
-  // SPIFFS
-  if (!SPIFFS.begin(true)) {
-    Serial.println("Error al montar el sistema de archivos SPIFFS");
-    return;
-  } 
-  
-  ///////////////////////////////////////////////////////
-  // Inicializar otro bus SPI para la tarjeta SD
-  sdSPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+  // LVGL (afficheur + touch JC4827W543)
+  lv_port_init();
 
-  // Inicializar la tarjeta SD
-  if (!SD.begin(SD_CS,sdSPI)) {
-    Serial.println("Error inicializando la tarjeta SD por SPI");
-    while (1);
-  }
-  Serial.println("Tarjeta SD inicializada correctamente");
-  // Listar archivos .wav desde el directorio raíz
-  //listWavFiles("/");
-
-  ///////////////////////////////////////////////////////
-
-  // Seq
-  // fill melodic with 60
-  for  (byte a=0;a<16;a++){
-    for  (byte b=0;b<16;b++){
-     melodic[a][b]=60;
-    }    
-  }
-  // set 8-15 as melodic;
-  isMelodic=B11111111<<8 | B00000000;
-
-  // Setup our clock system
-  uClock.init();
-  uClock.setOnSync24(onSync24Callback);
-  uClock.setTempo(bpm);
-
-  // initTimer(onSync24);
-  // setBPM(120);  // 120 BPM
-
-//    // demo pattern
-//    pattern[0]=B00010001<<8 | B10010001;
-//    pattern[2]=B11000101<<8 | B10101011;
-//    pattern[6]=B10110101<<8 | B10001111;
-//    pattern[3]=B00000110<<8 | B00000000;
-//    pattern[7]=B00000000<<8 | B01001000;
-//    // start playing demo pattern
-//    uClock.start();
-//    sstep=firstStep;
-//    refreshPADSTEP=true; 
-//    playing=true;
-//........................................................................................................................
-//
-//   B L E M I D I
-//
-  // BLEMidiServer.begin("zc2025ds");
-
-  // BLEMidiServer.setNoteOnCallback(onNoteOnBLE);
-
-  // BLEMidiServer.setOnConnectCallback([]() {
-  //   Serial.println("Connected");
-  // });
-  // BLEMidiServer.setOnDisconnectCallback([](){    
-  //   Serial.println("Disconnected");
-  // });
-
-
-//........................................................................................................................
-
-  select_rot();
-  draw8aBar();
-  draw8bBar();
-  
-
-}
+  // Vue de départ (au choix)
+  // build_main_menu();
+  build_vsampler_view();
+ }
 
 //////////////////////////////  L O O P  //////////////////////////////
 
 void loop() {
-   // MIDI USB polling (transport / notes / clock)
-   midiUSB_poll();
+  // UI LVGL
+  lv_task_handler();
 
-  // flag to do things outside sequencer timer isr
-  if (load_flag){
-    load_flag=false;
-    pattern_song_counter++;
-    // Comprobar step final
-    if ( (pattern_song_counter>lastMemory) || (pattern_song_counter>newLastMemory) || (pattern_song_counter==16) ){
-      lastMemory=newLastMemory;
-      pattern_song_counter=firstMemory;
-    }
-    load_pattern(pattern_song_counter);
-    selected_pattern=pattern_song_counter;
-    load_sound(pattern_song_counter);
-    selected_sndSet=pattern_song_counter;
-    select_rot();
-    draw8aBar();
-    refreshPADSTEP=true;
-  }
+  // Moteur existant
+  midiUSB_poll();
+  // Si besoin d’un tick manuel pour le séquenceur :
+  sequencer_tick();
 
-  // === Touch toujours actif pour dispatcher les pages ===
-  read_touch();
-
-  // === Dispatcher des pages ===
-  switch (currentPage) {
-    case PAGE_MAIN:
-      MainMenu_loop();
-      break;
-    case PAGE_SAMPLER:
-      // ——— UI sampler d’origine ———
-      DO_KEYPAD();
-      REFRESH_KEYS();
-      REFRESH_STATUS();
-      showLastTouched();
-      clearLastTouched();
-      break;
-    case PAGE_RECORDER:
-      extern void Recorder_loop();
-      Recorder_loop();
-      break;
-    case PAGE_FILES:
-      extern void Files_loop();
-      Files_loop();
-      break;
-    case PAGE_SETTINGS:
-      extern void Settings_loop();
-      Settings_loop();
-      break;
-    case PAGE_SETTINGS_MIDI:
-      extern void SettingsMIDI_loop();
-      SettingsMIDI_loop();
-      break;
-    case PAGE_WIFI:
-      extern void WIFI_loop();
-      WIFI_loop();
-      break;
-  }
-
-  // Weird code!!!! Segunda carga de setsoud porque con la primera no se generan bien el inicio y el fin de sample y el volumen/pan. Parece que no le da tiempo.
-  if (flag_ss=true){
-    count_loop++;
-    if (count_loop==2){
-      count_loop=0;
-      flag_ss=false;
-      for (byte f=0;f<16;f++){
-        setSound(f);
-      } 
-    } 
-  }
-
+  vTaskDelay(1);
 }
 
-// === Pont de compat pour le menu principal ===
-
+// === Pont de compat : si du code appelle encore Sampler_enter(), on renvoie vers la vue LVGL
 void Sampler_enter() {
-  // Si le menu change déjà currentPage, on peut juste rafraîchir l’UI ici.
-  LCD_clearWorkArea();
-  LCD_drawTitle("Sampler");
-  drawScreen1_ONLY1();
+  build_vsampler_view();
 }
-
-
 
