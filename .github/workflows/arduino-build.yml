@@ -36,8 +36,9 @@ jobs:
       - name: Compile the Sketch
         run: |
           arduino-cli compile \
-          --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=4M \
-          --output-dir build .
+            --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=4M \
+            --build-property "build.partitions=partition.csv" \
+            --output-dir build .
 
       - name: Create Artifact for Flashing
         uses: actions/upload-artifact@v4
