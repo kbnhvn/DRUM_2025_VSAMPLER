@@ -37,7 +37,7 @@ jobs:
         run: |
           arduino-cli compile \
             --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=4M \
-            --build-property "build.partitions=partition.csv" \
+            --build-property "build.partitions=custom_partitions.csv" \
             --output-dir build .
 
       - name: Create Artifact for Flashing
