@@ -10,11 +10,14 @@
 
 // WAV metadata structure
 struct WavMeta {
-  uint16_t channels=1;
-  uint32_t sampleRate=44100;
-  uint16_t bitsPerSample=16;
-  uint32_t dataOffset=0;
-  uint32_t dataBytes=0;
+  uint16_t channels;
+  uint32_t sampleRate;
+  uint16_t bitsPerSample;
+  uint32_t dataOffset;
+  uint32_t dataBytes;
+  
+  // Constructor with default values
+  WavMeta() : channels(1), sampleRate(44100), bitsPerSample(16), dataOffset(0), dataBytes(0) {}
 };
 
 // ---------- CONFIG ----------
