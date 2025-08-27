@@ -1,4 +1,3 @@
-
 // // Inicializa el timer y setea el callback
 // void initTimer(void (*callback)()) {
 //   onSync24Callback = callback;
@@ -93,5 +92,10 @@ void onSync24Callback(uint32_t tick){
 
 }
 
-
+extern "C" void sequencer_tick(void)
+{
+  static uint32_t tick = 0;         // 0..23
+  onSync24Callback(tick);           // ta fonction existante utilise 'tick'
+  tick = (tick + 1) % 24;           // avance d'un sous-tick
+}
 

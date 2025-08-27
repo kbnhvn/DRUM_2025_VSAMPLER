@@ -711,6 +711,13 @@ void setup() {
   // Vue de départ (au choix)
   // build_main_menu();
   build_vsampler_view();
+
+  // --- Init uClock ---
+  uClock.init();
+  uClock.setTempo(bpm);   // bpm est déjà ton tempo global
+  uClock.setResolution(PPQN_24);
+  uClock.setOnClock(onSync24Callback);   // ta fonction de sequencer.ino
+  uClock.start();   // démarre l’horloge
  }
 
 //////////////////////////////  L O O P  //////////////////////////////
@@ -721,8 +728,7 @@ void loop() {
 
   // Moteur existant
   midiUSB_poll();
-  // Si besoin d’un tick manuel pour le séquenceur :
-  sequencer_tick();
+  uClock.tick();
 
   vTaskDelay(1);
 }
@@ -730,5 +736,9 @@ void loop() {
 // === Pont de compat : si du code appelle encore Sampler_enter(), on renvoie vers la vue LVGL
 void Sampler_enter() {
   build_vsampler_view();
+}
+
+extern "C" void sequencer_tick() {
+  uClock.tick();
 }
 
