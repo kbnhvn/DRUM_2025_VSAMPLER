@@ -264,7 +264,7 @@ void DO_KEYPAD(){
             // Play
             case 22:
               if (playing){
-                uClock.stop();
+                sequencer_stop();
                 //stopTimer();
                 sstep=firstStep;
                 recording=false;
@@ -275,7 +275,7 @@ void DO_KEYPAD(){
                   pre_playing=true;
                 } else {
                 if (songing) pattern_song_counter=selected_pattern;
-                  uClock.start();
+                  sequencer_start();
                   //startTimer();
                   sstep=firstStep;
                   refreshPADSTEP=true;  
@@ -321,7 +321,7 @@ void DO_KEYPAD(){
               if (playing){
                 recording=!recording;
               } else {
-                uClock.start();
+                sequencer_start();
                 //startTimer();
                 recording=true;
                 playing=true;

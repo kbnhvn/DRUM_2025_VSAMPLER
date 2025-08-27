@@ -37,7 +37,7 @@ void do_rot(){
       octave=counter1;
     } else if (selected_rot==8){
       bpm=counter1;
-      uClock.setTempo(bpm);
+      sequencer_set_bpm(bpm);
       //setBPM(bpm);       
     } else if (selected_rot==9){
       master_vol=counter1;
