@@ -1,6 +1,6 @@
 #include <SD.h>
 
-extern "C" bool loadWavToSlot(const char* path, uint8_t slot);
+extern bool loadWavToSlot(const char* path, uint8_t slot);
 
 struct SampleSlot {
   int16_t* data=nullptr;
