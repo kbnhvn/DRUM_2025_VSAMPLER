@@ -8,9 +8,9 @@ static int g_route = 0;
 
 static lv_obj_t* scr_set;
 
-static void cb_back(lv_event_t*){
-  extern void build_main_menu();
-  build_main_menu();
+static void cb_back_settings(lv_event_t*){
+   extern void build_main_menu();
+   build_main_menu();
 }
 
 void build_settings_view(){
@@ -25,7 +25,7 @@ void build_settings_view(){
   lv_obj_t* back = lv_button_create(scr_set);
   lv_obj_set_size(back, 70, 32);
   lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(back, cb_back_settings, LV_EVENT_CLICKED, NULL);
   lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
   auto mk = [&](const char* t, lv_event_cb_t cb, int x, int y){

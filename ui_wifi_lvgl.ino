@@ -7,6 +7,9 @@ static lv_obj_t* list_ssid;
 static lv_obj_t* lbl_status;
 static lv_timer_t* tmr_conn = nullptr;
 
+static lv_obj_t* list_ssid = nullptr;
+static lv_obj_t* lbl_status = nullptr;
+
 static lv_obj_t* modal = nullptr;
 static lv_obj_t* kb = nullptr;
 static lv_obj_t* ta = nullptr;
@@ -23,20 +26,23 @@ static void start_connect_with_pass(const char* pass){
   WiFi.begin(g_selected_ssid, pass);
   lv_label_set_text(lbl_status, "Status: CONNECTING...");
   if (tmr_conn) lv_timer_del(tmr_conn);
-  tmr_conn = lv_timer_create([](){
-    wl_status_t st = WiFi.status();
-    if (st == WL_CONNECTED) {
-      IPAddress a = WiFi.localIP();
-      char ip[32]; snprintf(ip, sizeof(ip), "IP: %u.%u.%u.%u", a[0], a[1], a[2], a[3]);
-      lv_label_set_text(lbl_status, ip);
-      lv_timer_del(tmr_conn); tmr_conn = nullptr;
-    } else if (st == WL_CONNECT_FAILED) {
-      lv_label_set_text(lbl_status, "Status: FAILED");
-      lv_timer_del(tmr_conn); tmr_conn = nullptr;
-    } else {
-      lv_label_set_text(lbl_status, "Status: CONNECTING...");
-    }
-  }, 500, NULL);
+  extern void tmr_conn_cb(lv_timer_t* t);
+  tmr_conn = lv_timer_create(tmr_conn_cb, 500, NULL);
+}
+
+void tmr_conn_cb(lv_timer_t*){
+  wl_status_t st = WiFi.status();
+  if (st == WL_CONNECTED) {
+    IPAddress a = WiFi.localIP();
+    char ip[32]; snprintf(ip, sizeof(ip), "IP: %u.%u.%u.%u", a[0], a[1], a[2], a[3]);
+    lv_label_set_text(lbl_status, ip);
+    lv_timer_del(tmr_conn); tmr_conn = nullptr;
+  } else if (st == WL_CONNECT_FAILED) {
+    lv_label_set_text(lbl_status, "Status: FAILED");
+    lv_timer_del(tmr_conn); tmr_conn = nullptr;
+  } else {
+    lv_label_set_text(lbl_status, "Status: CONNECTING...");
+  }
 }
 
 // Keyboard event callbacks
@@ -68,14 +74,15 @@ static void refresh_ssid_list(){
     String s = WiFi.SSID(i);
     lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, s.c_str());
     lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-      const char* ssid = lv_list_get_button_text(list_ssid, lv_event_get_target(ev));
+      lv_obj_t* btn = lv_event_get_target_obj(ev);
+      const char* ssid = lv_list_get_button_text(list_ssid, btn);
       if (ssid) open_keyboard_for_pass(ssid);
     }, LV_EVENT_CLICKED, NULL);
   }
   lv_label_set_text(lbl_status, "Select SSID");
 }
 
-static void cb_back(lv_event_t*){
+static void cb_back_wf(lv_event_t*){
   extern void build_main_menu();
   if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn = nullptr; }
   build_main_menu();
@@ -95,7 +102,7 @@ void build_wifi_view(){
   lv_obj_t* back = lv_button_create(scr_wifi);
   lv_obj_set_size(back, 70, 32);
   lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(back, cb_back_wf, LV_EVENT_CLICKED, NULL);
   lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
   lbl_status = lv_label_create(scr_wifi);

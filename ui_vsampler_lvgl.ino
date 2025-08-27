@@ -1,6 +1,9 @@
 // ui_vsampler_lvgl.ino
 #include <lvgl.h>
-#include "ui_lvgl_compat.ino"
+void UI_Compat_Pad(uint8_t);
+void UI_Compat_Row1(uint8_t);
+void UI_Compat_Row2(uint8_t);
+void UI_Compat_Bar(uint8_t);
 
 // étiquettes (alignées sur tes 16 paramètres)
 static const char* kBars[16] = {
@@ -21,7 +24,7 @@ static lv_obj_t* scr_vs = nullptr;
 static lv_obj_t* bars[16];
 static lv_obj_t* pads[16];
 static lv_obj_t* lbl_info;
-static lv_timer_t* tmr = nullptr;
+static lv_timer_t* tmr_vs = nullptr;
 
 static lv_obj_t* make_btn(lv_obj_t* p, const char* t, lv_event_cb_t cb, void* ud, int w, int h, int x, int y){
   lv_obj_t* b = lv_button_create(p);
@@ -32,9 +35,9 @@ static lv_obj_t* make_btn(lv_obj_t* p, const char* t, lv_event_cb_t cb, void* ud
   return b;
 }
 
-static void cb_back(lv_event_t*){
-  extern void build_main_menu();
-  build_main_menu();
+static void cb_back_vs(lv_event_t*){
+   extern void build_main_menu();
+   build_main_menu();
 }
 
 static void cb_pad (lv_event_t* e){ UI_Compat_Pad ((uint8_t)(uintptr_t)lv_event_get_user_data(e)); }
@@ -63,7 +66,7 @@ static void refresh_ui(lv_timer_t*){
 }
 
 void build_vsampler_view(){
-  if (tmr) { lv_timer_del(tmr); tmr = nullptr; }
+  if (tmr_vs) { lv_timer_del(tmr_vs); tmr_vs = nullptr; }
 
   scr_vs = lv_obj_create(NULL);
   lv_scr_load(scr_vs);
@@ -76,7 +79,7 @@ void build_vsampler_view(){
   lv_obj_t* back = lv_button_create(scr_vs);
   lv_obj_set_size(back, 70, 32);
   lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(back, cb_back_vs, LV_EVENT_CLICKED, NULL);
   lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
   lbl_info = lv_label_create(scr_vs);
@@ -107,5 +110,5 @@ void build_vsampler_view(){
     bars[i] = make_btn(scr_vs, kBars[i], cb_bar, (void*)(uintptr_t)i, rw, rh, cx, cy);
   }
 
-  tmr = lv_timer_create(refresh_ui, 60, NULL);
+  tmr_vs = lv_timer_create(refresh_ui, 60, NULL);
 }

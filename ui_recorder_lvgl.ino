@@ -41,7 +41,7 @@ static lv_obj_t* sld_end   = nullptr;
 
 static lv_obj_t* canvas = nullptr;
 static uint16_t* canvas_buf = nullptr;
-static lv_timer_t* tmr = nullptr;
+static lv_timer_t* tmr_rec = nullptr;
 
 static const int WF_W = 460;
 static const int WF_H = 96;
@@ -102,7 +102,7 @@ static void update_range_labels(){
   lv_label_set_text(lbl_rng, buf);
 }
 
-static void cb_back(lv_event_t*){ extern void build_main_menu(); build_main_menu(); }
+static void cb_back_rec(lv_event_t*){ extern void build_main_menu(); build_main_menu(); }
 
 static lv_obj_t* mk_btn(lv_obj_t* p, const char* t, lv_event_cb_t cb, int x, int y, int w=90, int h=36){
   lv_obj_t* b = lv_button_create(p);
@@ -197,7 +197,7 @@ static void poll(lv_timer_t*){
 }
 
 void build_recorder_view(){
-  if (tmr) { lv_timer_del(tmr); tmr = nullptr; }
+  if (tmr_rec) { lv_timer_del(tmr_rec); tmr_rec = nullptr; }
   scr_rec = lv_obj_create(NULL);
   lv_scr_load(scr_rec);
 
@@ -209,7 +209,7 @@ void build_recorder_view(){
   lv_obj_t* back = lv_button_create(scr_rec);
   lv_obj_set_size(back, 70, 32);
   lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(back, cb_back_rec, LV_EVENT_CLICKED, NULL);
   lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
   // Boutons principaux
@@ -278,5 +278,5 @@ void build_recorder_view(){
   draw_waveform_into_canvas();
 
   // Timer
-  tmr = lv_timer_create(poll, 50, NULL);
+  tmr_rec = lv_timer_create(poll, 50, NULL);
 }
