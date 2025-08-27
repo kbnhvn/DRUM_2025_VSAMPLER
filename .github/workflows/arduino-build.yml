@@ -1,0 +1,46 @@
+name: Build and Test Arduino Sketch
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+        with:
+          version: '1.3.0'
+
+      - name: Install ESP32 Core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.2.0
+
+      - name: Install Libraries
+        run: |
+          arduino-cli lib install "GFX Library for Arduino"
+          arduino-cli lib install "uClock"
+          arduino-cli lib install "Adafruit ADS1X15"
+          arduino-cli lib install "U8g2"
+
+      - name: Compile the Sketch
+        run: |
+          arduino-cli compile \
+          --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=enabled,FlashSize=4M \
+          --output-dir build .
+
+      - name: Create Artifact for Flashing
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-s3-firmware
+          path: ./build/*.bin
