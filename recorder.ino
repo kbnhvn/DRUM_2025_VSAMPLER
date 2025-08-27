@@ -43,14 +43,6 @@ static float    s_editPitchSemi  = 0.0f;    // en demi-tons (±12, etc.)
 // ======================  WAV helpers  ==========================
 // ===============================================================
 
-struct WavMeta {
-  uint16_t channels=1;
-  uint32_t sampleRate=44100;
-  uint16_t bitsPerSample=16;
-  uint32_t dataOffset=0;
-  uint32_t dataBytes=0;
-};
-
 static bool wav_read_header(File &f, WavMeta &m){
   auto rd32=[&](uint32_t &v){ return f.read((uint8_t*)&v,4)==4; };
   auto rd16=[&](uint16_t &v){ return f.read((uint8_t*)&v,2)==2; };
