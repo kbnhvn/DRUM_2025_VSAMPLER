@@ -22,7 +22,7 @@ extern "C" {
   bool     rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch);
 }
 
-extern "C" bool loadWavToSlot(const char* path, uint8_t slot);
+extern bool loadWavToSlot(const char* path, uint8_t slot);
 extern uint8_t selected_sound;
 
 extern void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
@@ -172,14 +172,14 @@ static void on_sld_change(lv_event_t* e){
 
 // ---- Speed/Pitch sliders ----
 static void on_speed_change(lv_event_t* e){
-  int v = lv_slider_get_value(lv_event_get_target(e)); // 50..200 %
+  int v = lv_slider_get_value(lv_event_get_target_obj(e)); // 50..200 %
   float sp = (float)v / 100.0f;
   rec_edit_set_speed(sp);
   char buf[32]; snprintf(buf,sizeof(buf),"Speed: %d%%", v);
   lv_label_set_text(lbl_speed, buf);
 }
 static void on_pitch_change(lv_event_t* e){
-  int semis = lv_slider_get_value(lv_event_get_target(e)); // -12..+12
+  int semis = lv_slider_get_value(lv_event_get_target_obj(e)); // -12..+12
   rec_edit_set_pitch_semitones((float)semis);
   char buf[32]; snprintf(buf,sizeof(buf),"Pitch: %+d st", semis);
   lv_label_set_text(lbl_pitch, buf);

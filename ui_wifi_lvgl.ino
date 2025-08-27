@@ -46,7 +46,6 @@ void tmr_conn_cb(lv_timer_t*){
 // Keyboard event callbacks
 static void kb_ok_handler(const char* txt){
   if (txt && *txt) start_connect_with_pass(txt);
-  kb_close();
 }
 
 static void kb_cancel_handler(){ /* le prompt se ferme côté implémentation */ }
