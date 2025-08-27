@@ -59,3 +59,15 @@ void Settings_loop(){
     LCD_drawSmallText(10,120,line);
   }
 }
+
+static void Settings_load(){
+  File f=SD.open("/config/settings.json",FILE_READ);
+  if (!f) return;
+  DynamicJsonDocument d(256); if (deserializeJson(d,f)) { f.close(); return; } f.close();
+  g_wifiEnable = d["wifi_enable"]|false;
+  g_audioVolume= d["audio_volume"]|80;
+  g_audioRoute = d["audio_route"]|0;
+}
+
+// === AJOUT : expose un symbole non-statique pour le wrapper ===
+void Settings__force_load() { Settings_load(); }
