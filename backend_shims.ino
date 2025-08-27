@@ -1,35 +1,28 @@
-// backend_shims.ino
 #include <Arduino.h>
 #include <SD.h>
-#include <SPIFFS.h>
 
-// ==== settings_load() → wrap vers Settings_load() (qui est statique dans settings.ino) ====
-// On déclare ici une forward non-statique que settings.ino exposera via un helper.
+// wraps
 extern void Settings__force_load();
-extern void settings_load(void) {
-  Settings__force_load();
-}
+extern void settings_load(void) { Settings__force_load(); }
 
-// ==== audio_output_init() → wrap vers AudioOut_begin() ====
 extern void AudioOut_begin();
-extern void audio_output_init(void) {
-  AudioOut_begin();
-}
+extern void audio_output_init(void) { AudioOut_begin(); }
 
-// ==== files_init() : initialisation SD + SPIFFS (création dossiers utiles) ====
-extern SPIClass sdSPI;     // déjà déclaré dans ton vsampler.ino
+// SD init
+extern SPIClass sdSPI;           // défini dans ton .ino principal
 #ifndef SD_CS
-#define SD_CS 10          // si pas défini, valeur par défaut
+#define SD_CS 10
 #endif
 
 extern void files_init(void) {
-  // SPIFFS
-  SPIFFS.begin(true);                // true: format si absent
-
-  // SD (via HSPI si tu l’utilises : sdSPI.begin(...) est déjà fait côté pins ?)
-  SD.begin(SD_CS, sdSPI);            // si ça échoue, ce n’est pas bloquant pour le link
-
-  // Dossiers attendus par d’autres modules
+  // Monte la SD (via ton bus HSPI)
+  // Si tu as déjà sdSPI.begin(...) quelque part, ok; sinon ajoute :
+  sdSPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+  SD.begin(SD_CS, sdSPI, 10000000);
+  if (!SD.begin(SD_CS, sdSPI)) {
+    Serial.println("SD.begin failed (DATAFS)"); // non bloquant
+  }
+  // Crée les dossiers utilisés ailleurs
   if (!SD.exists("/samples")) SD.mkdir("/samples");
   if (!SD.exists("/config"))  SD.mkdir("/config");
 }
