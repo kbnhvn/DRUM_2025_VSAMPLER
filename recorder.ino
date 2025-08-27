@@ -1,12 +1,4 @@
 // recorder.ino
-#include <stdint.h>
-struct WavMeta {
-  uint16_t channels=1;
-  uint32_t sampleRate=44100;
-  uint16_t bitsPerSample=16;
-  uint32_t dataOffset=0;
-  uint32_t dataBytes=0;
-};
 // Enregistrement I2S minimal + édition WAV (trim, speed, pitch par resampling) + waveform peaks
 // Hypothèses : WAV PCM 16-bit, 1 ou 2 canaux. Stockage sur SD. Fichier de travail: /samples/rec_tmp.wav
 
@@ -14,6 +6,16 @@ struct WavMeta {
 #include <SD.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
+
+// WAV metadata structure
+struct WavMeta {
+  uint16_t channels=1;
+  uint32_t sampleRate=44100;
+  uint16_t bitsPerSample=16;
+  uint32_t dataOffset=0;
+  uint32_t dataBytes=0;
+};
 
 // ---------- CONFIG ----------
 static const char* kRecTmpPath = "/samples/rec_tmp.wav";
@@ -374,5 +376,6 @@ bool rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch){
   wav_write_header(out, outm);
   out.close();
   src.close();
+  free(srcBuf);
   return true;
 }
