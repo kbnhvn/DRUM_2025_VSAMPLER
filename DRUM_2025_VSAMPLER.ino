@@ -717,6 +717,7 @@ void setup() {
 void loop() {
   // UI LVGL
   lv_timer_handler();
+  vTaskDelay(5);
 
   // Moteur existant
   midiUSB_poll();

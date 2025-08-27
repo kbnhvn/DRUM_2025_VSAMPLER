@@ -50,13 +50,14 @@ static void lvgl_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
 }
 
 void lv_port_init() {
-  // Init écran
   if (!gfx->begin()) {
     Serial.println("gfx->begin() failed!");
     while (true) { delay(1000); }
   }
   pinMode(GFX_BL, OUTPUT);
-  digitalWrite(GFX_BL, HIGH);
+  digitalWrite(GFX_BL, HIGH);      // si noir, essaie LOW (certains BL sont active-low)
+  gfx->fillScreen(RGB565_BLUE);    // DOIT devenir bleu pendant 1s
+  delay(1000);
   gfx->fillScreen(RGB565_BLACK);
 
   // Touch
