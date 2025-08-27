@@ -135,8 +135,6 @@ int count_loop=0;
 
 // Touchscreen coordinates: (x, y) and pressure (z)
 int cox, coy, coz;
-////////////////////////////// TIMER SEQ 
-#include <uClock.h>
 
 ////////////////////////////// MIDI USB
 //#include <Adafruit_TinyUSB.h>
@@ -730,9 +728,5 @@ void loop() {
 // === Pont de compat : si du code appelle encore Sampler_enter(), on renvoie vers la vue LVGL
 void Sampler_enter() {
   build_vsampler_view();
-}
-
-extern "C" void sequencer_tick() {
-  uClock.tick();
 }
 

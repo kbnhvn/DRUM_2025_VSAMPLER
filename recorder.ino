@@ -386,7 +386,7 @@ bool rec_render_to(const char* dstPath, bool applyTrim, bool applySpeedPitch){
   return true;
 }
 
-extern "C" void recorder_poll(void) {
+void recorder_poll(void) {
   // Si tu pushes l'audio via rec_on_rx_samples() (callbacks I2S), rien à faire ici.
   // Laisse vide pour satisfaire le linker. (Tu pourras y mettre un flush SD si besoin)
 }
