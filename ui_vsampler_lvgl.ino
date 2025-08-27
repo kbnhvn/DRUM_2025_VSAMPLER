@@ -1,3 +1,6 @@
+#include <Arduino.h>   // pour byte, snprintf, uintptr_t, etc.
+#include <lvgl.h>
+
 // ui_vsampler_lvgl.ino
 #include <lvgl.h>
 void UI_Compat_Pad(uint8_t);
