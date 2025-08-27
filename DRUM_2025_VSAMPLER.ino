@@ -712,12 +712,6 @@ void setup() {
   // build_main_menu();
   build_vsampler_view();
 
-  // --- Init uClock ---
-  uClock.init();
-  uClock.setTempo(bpm);   // bpm est déjà ton tempo global
-  uClock.setResolution(PPQN_24);
-  uClock.setOnClock(onSync24Callback);   // ta fonction de sequencer.ino
-  uClock.start();   // démarre l’horloge
  }
 
 //////////////////////////////  L O O P  //////////////////////////////
@@ -728,7 +722,7 @@ void loop() {
 
   // Moteur existant
   midiUSB_poll();
-  uClock.tick();
+  sequencer_tick();
 
   vTaskDelay(1);
 }

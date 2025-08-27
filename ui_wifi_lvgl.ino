@@ -18,17 +18,12 @@ extern void kb_prompt_text(const char* title, bool passwordMode, const char* ini
 
 // Connect to Wi-Fi
 static void start_connect_with_pass(const char* pass){
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect(true, true);
-  delay(50);
   WiFi.begin(g_selected_ssid, pass);
-  lv_label_set_text(lbl_status, "Status: CONNECTING...");
-  if (tmr_conn) lv_timer_del(tmr_conn);
-  extern void tmr_conn_cb(lv_timer_t* t);
+  if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn=nullptr; }
   tmr_conn = lv_timer_create(tmr_conn_cb, 500, NULL);
 }
 
-void tmr_conn_cb(lv_timer_t*){
+static void tmr_conn_cb(lv_timer_t*){
   wl_status_t st = WiFi.status();
   if (st == WL_CONNECTED) {
     IPAddress a = WiFi.localIP();
@@ -71,7 +66,7 @@ static void refresh_ssid_list(){
     String s = WiFi.SSID(i);
     lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, s.c_str());
     lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-      lv_obj_t* btn = lv_event_get_target_obj(ev);
+      lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(ev);
       const char* ssid = lv_list_get_button_text(list_ssid, btn);
       if (ssid) open_keyboard_for_pass(ssid);
     }, LV_EVENT_CLICKED, NULL);
