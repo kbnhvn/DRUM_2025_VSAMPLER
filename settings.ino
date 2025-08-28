@@ -27,7 +27,7 @@ static void Settings_save(){
   if (!SD.exists("/config")) SD.mkdir("/config");
   File o=SD.open("/config/settings.json",FILE_WRITE); if(!o) return; serializeJson(d,o); o.close();
 }
-static void Settings_load(){
+void Settings_load(){
   File f=SD.open("/config/settings.json",FILE_READ);
   if (!f) return;
   DynamicJsonDocument d(256); if (deserializeJson(d,f)) { f.close(); return; } f.close();

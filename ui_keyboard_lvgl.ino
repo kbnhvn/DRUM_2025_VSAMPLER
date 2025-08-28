@@ -1,6 +1,8 @@
 // ui_keyboard_lvgl.ino
 #include <lvgl.h>
 
+extern void ui_theme_dark_apply(lv_obj_t* root);
+
 // Petit modal clavier + textarea. Appelle vos callbacks et se détruit proprement.
 static lv_obj_t* kb_modal = nullptr;
 static lv_obj_t* kb_kbd   = nullptr;
@@ -37,6 +39,8 @@ void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
   lv_obj_set_size(kb_modal, LV_PCT(100), LV_PCT(100));
   lv_obj_set_style_bg_opa(kb_modal, LV_OPA_80, 0);
   lv_obj_center(kb_modal);
+
+  ui_theme_dark_apply(kb_modal);
 
   lv_obj_t* cont = lv_obj_create(kb_modal);
   lv_obj_set_size(cont, LV_PCT(90), LV_PCT(80));

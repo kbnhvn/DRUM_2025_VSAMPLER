@@ -705,10 +705,10 @@ void setup() {
 
   // LVGL (afficheur + touch JC4827W543)
   lv_port_init();
+  ui_theme_dark_init();
 
   // Vue de départ (au choix)
-  // build_main_menu();
-  build_vsampler_view();
+  build_main_menu();
 
  }
 

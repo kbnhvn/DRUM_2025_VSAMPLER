@@ -6,6 +6,8 @@ extern void build_main_menu();
 extern void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
                            void (*on_ok)(const char*), void (*on_cancel)());
 
+extern void ui_theme_dark_apply(lv_obj_t* root);
+
 static lv_obj_t* scr_wifi   = nullptr;
 static lv_obj_t* list_ssid  = nullptr;
 static lv_obj_t* lbl_status = nullptr;
@@ -54,7 +56,7 @@ static void kb_cancel_handler() { /* no-op */ }
 
 /* ---------- Item click: read SSID from list btn ---------- */
 static void on_ssid_clicked(lv_event_t* e) {
-  lv_obj_t* btn = lv_event_get_target(e);                 // v9: returns lv_obj_t*
+  lv_obj_t* btn = (lv_obj_t*) lv_event_get_target(e);                // v9: returns lv_obj_t*
   const char* ssid = lv_list_get_btn_text(list_ssid, btn); // v9 API
   if (!ssid || !*ssid) return;
   s_sel_ssid = ssid;
@@ -85,6 +87,7 @@ void build_wifi_view() {
   lv_obj_set_flex_flow(scr_wifi, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_wifi, 8, 0);
   lv_scr_load(scr_wifi);
+  ui_theme_dark_apply(scr_wifi);
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_wifi);

@@ -37,6 +37,9 @@ extern uint8_t selected_sound;
 extern void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
                            void (*on_ok)(const char*), void (*on_cancel)());
 
+extern void ui_theme_dark_apply(lv_obj_t* root);
+
+
 // ==== UI nodes ====
 static lv_obj_t* scr_rec   = nullptr;
 static lv_obj_t* lbl_dur   = nullptr;
@@ -219,6 +222,7 @@ void build_recorder_view() {
   lv_obj_set_flex_flow(scr_rec, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_rec, 8, 0);
   lv_scr_load(scr_rec);
+  ui_theme_dark_apply(scr_rec); 
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_rec);

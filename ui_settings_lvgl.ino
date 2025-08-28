@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 extern void build_main_menu();
+extern void ui_theme_dark_apply(lv_obj_t* root);
 
 // Backends existants
 extern void AudioOut_setRoute(int r);        // 0=JACK, 1=SPK (routage)
@@ -11,7 +12,7 @@ extern uint8_t g_midiChannel;                // 1..16 (selon ton implementation)
 
 // Petites helpers UI
 static lv_obj_t* scr_set   = nullptr;
-static lv_obj_t* lbl_info  = nullptr;
+static lv_obj_t* lbl_info_set  = nullptr;
 static lv_obj_t* sw_wifi   = nullptr; // bool UI only (si tu veux relier à ton save JSON)
 static lv_obj_t* dd_route  = nullptr;
 static lv_obj_t* sld_vol   = nullptr;
@@ -32,7 +33,7 @@ static void apply_and_refresh(){
   char info[64];
   snprintf(info, sizeof(info), "MIDI CH:%u  VOL:%u  OUT:%s",
            (unsigned)g_midiChannel, (unsigned)local_vol, local_route? "SPK":"JACK");
-  lv_label_set_text(lbl_info, info);
+  lv_label_set_text(lbl_info_set, info);
 }
 
 static void cb_back_settings(lv_event_t*) { build_main_menu(); }
@@ -87,6 +88,7 @@ void build_settings_view(){
   lv_obj_set_flex_flow(scr_set, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_set, 10, 0);
   lv_scr_load(scr_set);
+  ui_theme_dark_apply(scr_set); 
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_set);
@@ -160,6 +162,6 @@ void build_settings_view(){
   }
 
   // Info & apply
-  lbl_info = lv_label_create(body);
+  lbl_info_set = lv_label_create(body);
   apply_and_refresh();
 }

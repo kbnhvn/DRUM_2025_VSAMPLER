@@ -5,6 +5,7 @@
 extern void build_main_menu();
 extern bool loadWavToSlot(const char* path, uint8_t slot);
 extern uint8_t selected_sound;
+extern void ui_theme_dark_apply(lv_obj_t* root);
 
 static lv_obj_t* scr_files = nullptr;
 static lv_obj_t* list_files = nullptr;
@@ -17,7 +18,7 @@ static String sel_name;
 static void cb_back_files(lv_event_t*) { build_main_menu(); }
 
 static void list_refresh() {
-  lv_list_clear(list_files);
+  lv_obj_clean(list_files);
   if (!SD.exists(g_dir)) SD.mkdir(g_dir.c_str());
 
   File dir = SD.open(g_dir.c_str());
@@ -107,6 +108,7 @@ void build_files_view() {
   lv_obj_set_flex_flow(scr_files, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_files, 8, 0);
   lv_scr_load(scr_files);
+  ui_theme_dark_apply(scr_files);
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_files);

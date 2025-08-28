@@ -14,6 +14,8 @@ extern byte sstep;
 extern uint16_t pattern[16];
 extern int32_t ROTvalue[16][8];
 
+extern void ui_theme_dark_apply(lv_obj_t* root);
+
 static const char* kBars[16] = {
   "SAM","INI","END","PIT","RVS","VOL","PAN","FIL",
   "BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"
@@ -24,7 +26,7 @@ static const char* kRow2[8] = { "SHIFT","-1","-10","+10","+1","","","SHIFT" };
 static lv_obj_t* scr_vs = nullptr;
 static lv_obj_t* pads[16];
 static lv_obj_t* bars[16];
-static lv_obj_t* lbl_info = nullptr;
+static lv_obj_t* lbl_info_vs = nullptr;
 static lv_timer_t* tmr_vs = nullptr;
 
 static void cb_back_vs(lv_event_t*){
@@ -41,7 +43,7 @@ static void refresh_ui(lv_timer_t*){
   char info[64];
   snprintf(info, sizeof(info), "SND:%u  BAR:%s  BPM:%d  OCT:%d",
            (unsigned)selected_sound, kBars[selected_rot % 16], bpm, octave);
-  lv_label_set_text(lbl_info, info);
+  lv_label_set_text(lbl_info_vs, info);
 
   for (int i=0;i<16;i++){
     bool on = (pattern[i] >> sstep) & 1;
@@ -75,6 +77,7 @@ void build_vsampler_view(){
   lv_obj_set_flex_flow(scr_vs, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_vs, 8, 0);
   lv_scr_load(scr_vs);
+  ui_theme_dark_apply(scr_vs); 
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_vs);
@@ -96,8 +99,8 @@ void build_vsampler_view(){
   lv_obj_t* bl = lv_label_create(btnBack); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
   // Info
-  lbl_info = lv_label_create(scr_vs);
-  lv_label_set_text(lbl_info, "SND:0  BAR:SAM  BPM:120  OCT:5");
+  lbl_info_vs = lv_label_create(scr_vs);
+  lv_label_set_text(lbl_info_vs, "SND:0  BAR:SAM  BPM:120  OCT:5");
 
   // Grille pads 4x4
   lv_obj_t* pad_grid = lv_obj_create(scr_vs);

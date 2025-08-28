@@ -25,12 +25,6 @@ extern void audio_output_init(void) { AudioOut_begin(); }
   #define SD_SCLK 12
 #endif
 
-// Instance SPI pour SD (définie ailleurs ? sinon on la crée ici)
-#if !defined(HAVE_SD_SPI_INSTANCE)
-  #define HAVE_SD_SPI_INSTANCE 1
-  SPIClass sdSPI(HSPI);
-#endif
-
 // Petit helper pour lister /samples (debug)
 static void list_samples_dir() {
   if (!SD.exists("/samples")) { Serial.println("[files] /samples n'existe pas"); return; }

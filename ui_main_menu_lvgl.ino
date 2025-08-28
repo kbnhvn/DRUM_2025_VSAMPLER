@@ -7,6 +7,7 @@ extern void build_files_view();
 extern void build_recorder_view();
 extern void build_wifi_view();
 extern void build_settings_view();
+extern void ui_theme_dark_apply(lv_obj_t* root);
 
 static lv_obj_t* scr_menu = nullptr;
 
@@ -41,6 +42,7 @@ void build_main_menu(){
   lv_obj_set_flex_flow(scr_menu, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(scr_menu, 10, 0);
   lv_scr_load(scr_menu);
+  ui_theme_dark_apply(scr_menu);
 
   // Header
   lv_obj_t* header = lv_obj_create(scr_menu);
@@ -86,8 +88,12 @@ void build_main_menu(){
   // Optionnel: About
   make_tile(grid, "About", "Firmware / Build",
     [](lv_event_t*){
-      lv_obj_t* m = lv_msgbox_create(NULL, "About",
-        "DRUM 2025 VSAMPLER\nLVGL v9 UI\nESP32-S3", NULL, true);
+      lv_obj_t* m = lv_msgbox_create(NULL);
+      lv_msgbox_add_title(m, "About");
+      lv_msgbox_add_text(m, "DRUM 2025 VSAMPLER\nLVGL v9 UI\nESP32-S3");
+      lv_msgbox_add_footer_button(m, "OK");
+      lv_msgbox_open(m);
+      ui_theme_dark_apply(m)
       lv_obj_center(m);
     });
 }
