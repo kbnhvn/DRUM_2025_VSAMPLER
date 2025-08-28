@@ -1,33 +1,31 @@
-// ui_wifi_lvgl.ino
+// ui_wifi_lvgl.ino — LVGL v9 compliant
 #include <lvgl.h>
 #include <WiFi.h>
 
-static lv_obj_t* scr_wifi;
-static lv_timer_t* tmr_conn = nullptr;
-
-static lv_obj_t* list_ssid = nullptr;
-static lv_obj_t* lbl_status = nullptr;
-
-static lv_obj_t* modal = nullptr;
-static lv_obj_t* kb = nullptr;
-static lv_obj_t* ta = nullptr;
-static char g_selected_ssid[40] = {0};
-
+extern void build_main_menu();
 extern void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
                            void (*on_ok)(const char*), void (*on_cancel)());
 
-// Connect to Wi-Fi
-static void start_connect_with_pass(const char* pass){
-  WiFi.begin(g_selected_ssid, pass);
-  if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn=nullptr; }
-  tmr_conn = lv_timer_create(tmr_conn_cb, 500, NULL);
+static lv_obj_t* scr_wifi   = nullptr;
+static lv_obj_t* list_ssid  = nullptr;
+static lv_obj_t* lbl_status = nullptr;
+static lv_timer_t* tmr_conn = nullptr;
+
+static String s_sel_ssid;
+
+/* ---------- Back ---------- */
+static void cb_back_wifi(lv_event_t*) {
+  if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn = nullptr; }
+  build_main_menu();
 }
 
-static void tmr_conn_cb(lv_timer_t*){
+/* ---------- Connect polling timer ---------- */
+static void tmr_conn_cb(lv_timer_t*) {
   wl_status_t st = WiFi.status();
   if (st == WL_CONNECTED) {
     IPAddress a = WiFi.localIP();
-    char ip[32]; snprintf(ip, sizeof(ip), "IP: %u.%u.%u.%u", a[0], a[1], a[2], a[3]);
+    char ip[32];
+    snprintf(ip, sizeof(ip), "IP: %u.%u.%u.%u", a[0], a[1], a[2], a[3]);
     lv_label_set_text(lbl_status, ip);
     lv_timer_del(tmr_conn); tmr_conn = nullptr;
   } else if (st == WL_CONNECT_FAILED) {
@@ -38,82 +36,95 @@ static void tmr_conn_cb(lv_timer_t*){
   }
 }
 
-// Keyboard event callbacks
-static void kb_ok_handler(const char* txt){
-  if (txt && *txt) start_connect_with_pass(txt);
-}
-
-static void kb_cancel_handler(){ /* le prompt se ferme côté implémentation */ }
-
-static void open_keyboard_for_pass(const char* ssid){
-  strncpy(g_selected_ssid, ssid, sizeof(g_selected_ssid)-1);
-  char title[64]; snprintf(title, sizeof(title), "Pass for: %s", ssid);
-  kb_prompt_text(title, /*passwordMode=*/true, /*initial=*/"", kb_ok_handler, kb_cancel_handler);
-}
-
-static void refresh_ssid_list(){
-  lv_obj_clean(list_ssid);
-  lv_label_set_text(lbl_status, "Scanning...");
+static void start_connect_with_pass(const char* pass) {
   WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
+  WiFi.disconnect(true, true);
   delay(50);
-  int n = WiFi.scanNetworks(false, true);
-  if (n <= 0) {
-    lv_label_set_text(lbl_status, "No networks");
-    return;
-  }
-  for (int i = 0; i < n; i++){
-    String s = WiFi.SSID(i);
-    lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, s.c_str());
-    lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-      lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(ev);
-      const char* ssid = lv_list_get_button_text(list_ssid, btn);
-      if (ssid) open_keyboard_for_pass(ssid);
-    }, LV_EVENT_CLICKED, NULL);
-  }
-  lv_label_set_text(lbl_status, "Select SSID");
+  WiFi.begin(s_sel_ssid.c_str(), pass);
+  if (tmr_conn) lv_timer_del(tmr_conn);
+  tmr_conn = lv_timer_create(tmr_conn_cb, 500, NULL);
 }
 
-static void cb_back_wf(lv_event_t*){
-  extern void build_main_menu();
-  if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn = nullptr; }
-  build_main_menu();
+/* ---------- KB handlers ---------- */
+static void kb_ok_handler(const char* txt) {
+  if (!txt) return;
+  start_connect_with_pass(txt);
+}
+static void kb_cancel_handler() { /* no-op */ }
+
+/* ---------- Item click: read SSID from list btn ---------- */
+static void on_ssid_clicked(lv_event_t* e) {
+  lv_obj_t* btn = lv_event_get_target(e);                 // v9: returns lv_obj_t*
+  const char* ssid = lv_list_get_btn_text(list_ssid, btn); // v9 API
+  if (!ssid || !*ssid) return;
+  s_sel_ssid = ssid;
+  kb_prompt_text("WiFi password", true, "", kb_ok_handler, kb_cancel_handler);
 }
 
-void build_wifi_view(){
+/* ---------- Scan + populate ---------- */
+static void refresh_ssid_list() {
+  lv_obj_clean(list_ssid); // v9: clean children
+  lv_label_set_text(lbl_status, "Scanning...");
+
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) {
+    const char* name = WiFi.SSID(i).c_str();
+    lv_obj_t* btn = lv_list_add_btn(list_ssid, LV_SYMBOL_WIFI, name); // v9
+    lv_obj_add_event_cb(btn, on_ssid_clicked, LV_EVENT_CLICKED, NULL);
+  }
+  char t[48]; snprintf(t, sizeof(t), "Found: %d", n);
+  lv_label_set_text(lbl_status, t);
+}
+
+/* ---------- View ---------- */
+void build_wifi_view() {
   if (tmr_conn) { lv_timer_del(tmr_conn); tmr_conn = nullptr; }
 
   scr_wifi = lv_obj_create(NULL);
+  lv_obj_set_size(scr_wifi, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_flex_flow(scr_wifi, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_all(scr_wifi, 8, 0);
   lv_scr_load(scr_wifi);
 
-  lv_obj_t* ttl = lv_label_create(scr_wifi);
-  lv_label_set_text(ttl, "Wi-Fi");
-  lv_obj_align(ttl, LV_ALIGN_TOP_LEFT, 6, 6);
+  // Header
+  lv_obj_t* header = lv_obj_create(scr_wifi);
+  lv_obj_set_width(header, LV_PCT(100));
+  lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
+  lv_obj_set_style_pad_all(header, 4, 0);
+  lv_obj_set_style_pad_column(header, 6, 0);
+  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-  // BACK
-  lv_obj_t* back = lv_button_create(scr_wifi);
-  lv_obj_set_size(back, 70, 32);
-  lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back_wf, LV_EVENT_CLICKED, NULL);
-  lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
+  lv_obj_t* lbl = lv_label_create(header); lv_label_set_text(lbl, "Wi-Fi");
+  lv_obj_t* spacer = lv_obj_create(header);
+  lv_obj_set_flex_grow(spacer, 1);
+  lv_obj_set_style_bg_opa(spacer, LV_OPA_0, 0);
+  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_SCROLLABLE);
 
+  lv_obj_t* btnBack = lv_button_create(header);
+  lv_obj_add_event_cb(btnBack, cb_back_wifi, LV_EVENT_CLICKED, NULL);
+  lv_obj_t* bl = lv_label_create(btnBack); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
+
+  // Toolbar
+  lv_obj_t* tb = lv_obj_create(scr_wifi);
+  lv_obj_set_width(tb, LV_PCT(100));
+  lv_obj_set_flex_flow(tb, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_style_pad_all(tb, 6, 0);
+  lv_obj_set_style_pad_column(tb, 6, 0);
+  lv_obj_set_style_pad_row(tb, 6, 0);
+  lv_obj_clear_flag(tb, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* bScan = lv_button_create(tb);
+  lv_obj_add_event_cb(bScan, [](lv_event_t*){ refresh_ssid_list(); }, LV_EVENT_CLICKED, NULL);
+  lv_obj_t* lS = lv_label_create(bScan); lv_label_set_text(lS, "SCAN"); lv_obj_center(lS);
+
+  // Status
   lbl_status = lv_label_create(scr_wifi);
-  lv_label_set_text(lbl_status, "Status: IDLE");
-  lv_obj_align(lbl_status, LV_ALIGN_TOP_RIGHT, -86, 6);
+  lv_label_set_text(lbl_status, "Idle");
 
+  // List
   list_ssid = lv_list_create(scr_wifi);
-  lv_obj_set_size(list_ssid, 460, 200);
-  lv_obj_align(list_ssid, LV_ALIGN_TOP_MID, 0, 36);
+  lv_obj_set_size(list_ssid, LV_PCT(100), LV_PCT(100));
 
-  auto mk = [&](const char* t, lv_event_cb_t cb, int x){
-    lv_obj_t* b = lv_button_create(scr_wifi);
-    lv_obj_set_size(b, 110, 36);
-    lv_obj_align(b, LV_ALIGN_BOTTOM_LEFT, x, -8);
-    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t* l=lv_label_create(b); lv_label_set_text(l, t); lv_obj_center(l);
-    return b;
-  };
-  mk("SCAN", [](lv_event_t*){ refresh_ssid_list(); }, 10);
-
+  // Initial scan
   refresh_ssid_list();
 }

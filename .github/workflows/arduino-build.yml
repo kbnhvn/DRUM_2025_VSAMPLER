@@ -3,10 +3,10 @@ name: Build and Test Arduino Sketch
 on:
   push:
     branches:
-      - lvgl
+      - lvgl-dev
   pull_request:
     branches:
-      - lvgl
+      - lvgl-dev
 
 jobs:
   build:

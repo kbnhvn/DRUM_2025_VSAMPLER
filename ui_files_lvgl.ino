@@ -2,161 +2,156 @@
 #include <lvgl.h>
 #include <SD.h>
 
+extern void build_main_menu();
 extern bool loadWavToSlot(const char* path, uint8_t slot);
 extern uint8_t selected_sound;
 
-// Clavier LVGL (tab ui_kb_lvgl.ino)
-extern void kb_prompt_text(const char* title, bool passwordMode, const char* initial,
-                           void (*on_ok)(const char*), void (*on_cancel)());
+static lv_obj_t* scr_files = nullptr;
+static lv_obj_t* list_files = nullptr;
+static lv_obj_t* lbl_path = nullptr;
+static lv_timer_t* tmr_files = nullptr;
 
-static lv_obj_t* scr_files;
-static lv_obj_t* list_files;
+static String g_dir = "/samples";
+static String sel_name;
 
-// Fichier sélectionné (mis à jour quand on clique un item)
-static char g_selected_name[64] = {0};     // Nom (ex: "kick.wav")
-static char g_selected_full[96] = {0};     // Chemin (ex: "/samples/kick.wav")
+static void cb_back_files(lv_event_t*) { build_main_menu(); }
 
-// Helpers
-static inline void set_selected(const char* name) {
-  if (!name) return;
-  strncpy(g_selected_name, name, sizeof(g_selected_name)-1);
-  snprintf(g_selected_full, sizeof(g_selected_full), "/samples/%s", g_selected_name);
-}
+static void list_refresh() {
+  lv_list_clear(list_files);
+  if (!SD.exists(g_dir)) SD.mkdir(g_dir.c_str());
 
-static void cb_back_files(lv_event_t*){
-  extern void build_main_menu();
-  build_main_menu();
-}
+  File dir = SD.open(g_dir.c_str());
+  if (!dir) return;
 
-static void refresh_files(){
-  lv_obj_clean(list_files);
-
-  File dir = SD.open("/samples");
-  if (!dir || !dir.isDirectory()) {
-    SD.mkdir("/samples");
-    dir = SD.open("/samples");
-  }
-  // Reset selection
-  g_selected_name[0] = '\0';
-  g_selected_full[0] = '\0';
-
-  for (File e = dir.openNextFile(); e; e = dir.openNextFile()){
-    if (!e.isDirectory()){
-      lv_obj_t* btn = lv_list_add_button(list_files, LV_SYMBOL_FILE, e.name());
-
-      // 1) Click : charge aussi dans le slot courant ET sélectionne l’item
+  while (1) {
+    File e = dir.openNextFile();
+    if (!e) break;
+    if (e.isDirectory()) {
+      lv_obj_t* btn = lv_list_add_button(list_files, LV_SYMBOL_DIRECTORY, e.name());
       lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-        lv_obj_t* btn = lv_event_get_target_obj(ev);
-        const char* name = lv_list_get_button_text(list_files, btn);
+        const char* name = lv_list_get_button_text(list_files, (lv_obj_t*)lv_event_get_target(ev));
         if (!name) return;
-        set_selected(name);
-        loadWavToSlot(g_selected_full, selected_sound);
+        sel_name = name;
       }, LV_EVENT_CLICKED, NULL);
-
-      // 2) Long press : ne charge pas, ne fait que sélectionner
-      lv_obj_add_event_cb(btn, [](lv_event_t* ev){
-        lv_obj_t* btn = lv_event_get_target_obj(ev);
-        const char* name = lv_list_get_button_text(list_files, btn);
-        if (!name) return;
-        set_selected(name);
-      }, LV_EVENT_LONG_PRESSED, NULL);
+    } else {
+      // Ne montrer que .wav
+      String n = e.name();
+      n.toLowerCase();
+      if (n.endsWith(".wav")) {
+        lv_obj_t* btn = lv_list_add_button(list_files, LV_SYMBOL_AUDIO, e.name());
+        lv_obj_add_event_cb(btn, [](lv_event_t* ev){
+          const char* name = lv_list_get_button_text(list_files, (lv_obj_t*)lv_event_get_target(ev));
+          if (!name) return;
+          sel_name = name;
+        }, LV_EVENT_CLICKED, NULL);
+      }
     }
+    e.close();
   }
+  dir.close();
+
+  char p[96]; snprintf(p, sizeof(p), "Path: %s", g_dir.c_str());
+  lv_label_set_text(lbl_path, p);
 }
 
-// ===== RENAME =====
-static void rename_ok(const char* txt){
-  if (!g_selected_name[0]) return;       // rien sélectionné
-  if (!txt || !*txt) return;             // nom vide
-  // Construire destination
-  char dst[96];
-  snprintf(dst, sizeof(dst), "/samples/%s", txt);
-
-  // Si destination existe déjà, on la remplace
-  if (SD.exists(dst)) SD.remove(dst);
-  SD.rename(g_selected_full, dst);
-
-  // Mettre à jour la sélection et l’affichage
-  set_selected(txt);
-  refresh_files();
-}
-static void rename_cancel(){ /* rien */ }
-
-static void cb_rename(lv_event_t*){
-  if (!g_selected_name[0]) {
-    // pas de sélection : proposer de saisir directement un nom
-    kb_prompt_text("Rename (select file first or type target)", false, "", rename_ok, rename_cancel);
-    return;
-  }
-  // Proposer le nom actuel par défaut
-  kb_prompt_text("Rename", false, g_selected_name, rename_ok, rename_cancel);
+static void cb_open_dir(lv_event_t*) {
+  if (sel_name.length()==0) return;
+  String np = g_dir + "/" + sel_name;
+  File f = SD.open(np.c_str());
+  if (f && f.isDirectory()) { g_dir = np; list_refresh(); }
+  if (f) f.close();
 }
 
-// ===== DELETE =====
-// Par consigne : on utilise aussi le clavier LVGL (taper DELETE pour confirmer)
-static void delete_ok(const char* txt){
-  if (!g_selected_name[0]) return;
-  if (!txt) return;
-
-  // Accepte "DELETE" ou "YES" (insensible à la casse)
-  bool confirm = false;
-  // Uppercase copy
-  char up[16]; int i=0; for (; txt[i] && i<15; ++i){ up[i] = (char)toupper((unsigned char)txt[i]); } up[i]=0;
-  if (!strcmp(up, "DELETE") || !strcmp(up, "YES")) confirm = true;
-  if (!confirm) return;
-
-  // Supprime
-  SD.remove(g_selected_full);
-  g_selected_name[0] = '\0';
-  g_selected_full[0] = '\0';
-  refresh_files();
-}
-static void delete_cancel(){ /* rien */ }
-
-static void cb_delete(lv_event_t*){
-  if (!g_selected_name[0]) {
-    // Rien de sélectionné → pas de suppression
-    kb_prompt_text("Type DELETE to confirm (no selection)", false, "", delete_ok, delete_cancel);
-    return;
-  }
-  char title[96];
-  snprintf(title, sizeof(title), "Delete %s (type DELETE)", g_selected_name);
-  kb_prompt_text(title, false, "", delete_ok, delete_cancel);
+static void cb_up_dir(lv_event_t*) {
+  if (g_dir == "/") return;
+  int slash = g_dir.lastIndexOf('/');
+  if (slash <= 0) g_dir = "/";
+  else g_dir = g_dir.substring(0, slash);
+  list_refresh();
 }
 
-void build_files_view(){
+static void cb_load(lv_event_t*) {
+  if (sel_name.length()==0) return;
+  String path = g_dir + "/" + sel_name;
+  loadWavToSlot(path.c_str(), selected_sound);
+}
+
+static void cb_rename(lv_event_t*) {
+  if (sel_name.length()==0) return;
+  String oldp = g_dir + "/" + sel_name;
+  extern void kb_prompt_text(const char*, bool, const char*, void (*)(const char*), void(*)());
+  kb_prompt_text("Rename", false, sel_name.c_str(), [](const char* txt){
+    if (!txt || !*txt) return;
+    String newp = String("/samples/") + txt;
+    if (SD.exists(newp)) SD.remove(newp);
+    String oldp = String("/samples/") + sel_name; // sel_name global au moment du click
+    SD.rename(oldp, newp);
+  }, nullptr);
+  // Après renommage manuel, rafraîchir
+  list_refresh();
+}
+
+static void cb_delete(lv_event_t*) {
+  if (sel_name.length()==0) return;
+  String p = g_dir + "/" + sel_name;
+  SD.remove(p.c_str());
+  sel_name = "";
+  list_refresh();
+}
+
+void build_files_view() {
+  if (tmr_files) { lv_timer_del(tmr_files); tmr_files = nullptr; }
+
   scr_files = lv_obj_create(NULL);
+  lv_obj_set_size(scr_files, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_flex_flow(scr_files, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_all(scr_files, 8, 0);
   lv_scr_load(scr_files);
 
-  // Titre
-  lv_obj_t* ttl = lv_label_create(scr_files);
-  lv_label_set_text(ttl, "Files (/samples)");
-  lv_obj_align(ttl, LV_ALIGN_TOP_LEFT, 6, 6);
+  // Header
+  lv_obj_t* header = lv_obj_create(scr_files);
+  lv_obj_set_width(header, LV_PCT(100));
+  lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
+  lv_obj_set_style_pad_all(header, 4, 0);
+  lv_obj_set_style_pad_column(header, 6, 0);
+  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-  // BACK (haut droite)
-  lv_obj_t* back = lv_button_create(scr_files);
-  lv_obj_set_size(back, 70, 32);
-  lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back_files, LV_EVENT_CLICKED, NULL);
-  lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
+  lv_obj_t* lbl = lv_label_create(header); lv_label_set_text(lbl, "Files");
+  lv_obj_t* spacer = lv_obj_create(header); lv_obj_set_flex_grow(spacer, 1);
+  lv_obj_set_style_bg_opa(spacer, LV_OPA_0, 0);
+  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_SCROLLABLE);
 
-  // Liste
-  list_files = lv_list_create(scr_files);
-  lv_obj_set_size(list_files, 460, 200);
-  lv_obj_align(list_files, LV_ALIGN_TOP_MID, 0, 36);
+  lv_obj_t* btnBack = lv_button_create(header);
+  lv_obj_add_event_cb(btnBack, cb_back_files, LV_EVENT_CLICKED, NULL);
+  lv_obj_t* bl = lv_label_create(btnBack); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
 
-  // Boutons bas
-  auto mk = [&](const char* t, lv_event_cb_t cb, int x){
-    lv_obj_t* b = lv_button_create(scr_files);
-    lv_obj_set_size(b, 110, 36);
-    lv_obj_align(b, LV_ALIGN_BOTTOM_LEFT, x, -8);
+  // Toolbar
+  lv_obj_t* tb = lv_obj_create(scr_files);
+  lv_obj_set_width(tb, LV_PCT(100));
+  lv_obj_set_flex_flow(tb, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_style_pad_all(tb, 6, 0);
+  lv_obj_set_style_pad_column(tb, 6, 0);
+  lv_obj_set_style_pad_row(tb, 6, 0);
+  lv_obj_clear_flag(tb, LV_OBJ_FLAG_SCROLLABLE);
+
+  auto mk = [&](const char* t, lv_event_cb_t cb){
+    lv_obj_t* b = lv_button_create(tb);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t* l = lv_label_create(b); lv_label_set_text(l, t); lv_obj_center(l);
+    lv_obj_t* l=lv_label_create(b); lv_label_set_text(l,t); lv_obj_center(l);
     return b;
   };
-  mk("REFRESH", [](lv_event_t*){ refresh_files(); }, 10);
-  mk("RENAME",  cb_rename,                           130);
-  mk("DELETE",  cb_delete,                           250);
+  mk("OPEN", cb_open_dir);
+  mk("UP",   cb_up_dir);
+  mk("LOAD", cb_load);
+  mk("REN",  cb_rename);
+  mk("DEL",  cb_delete);
 
-  refresh_files();
+  // Path label
+  lbl_path = lv_label_create(scr_files);
+  lv_label_set_text(lbl_path, "Path: /samples");
+
+  // List
+  list_files = lv_list_create(scr_files);
+  lv_obj_set_size(list_files, LV_PCT(100), LV_PCT(100));
+  list_refresh();
 }

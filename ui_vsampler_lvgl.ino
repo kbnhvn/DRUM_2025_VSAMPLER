@@ -1,14 +1,19 @@
-#include <Arduino.h>   // pour byte, snprintf, uintptr_t, etc.
-#include <lvgl.h>
-
 // ui_vsampler_lvgl.ino
 #include <lvgl.h>
+
+// Hooks compat (déjà fournis dans ui_lvgl_compat.ino)
 void UI_Compat_Pad(uint8_t);
 void UI_Compat_Row1(uint8_t);
 void UI_Compat_Row2(uint8_t);
 void UI_Compat_Bar(uint8_t);
 
-// étiquettes (alignées sur tes 16 paramètres)
+// État exposé
+extern byte selected_sound, selected_rot;
+extern int bpm, octave;
+extern byte sstep;
+extern uint16_t pattern[16];
+extern int32_t ROTvalue[16][8];
+
 static const char* kBars[16] = {
   "SAM","INI","END","PIT","RVS","VOL","PAN","FIL",
   "BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"
@@ -16,31 +21,15 @@ static const char* kBars[16] = {
 static const char* kRow1[8] = { "PAD","RND P","LOAD P","SAVE PS","MUTE","PIANO","PLAY","SONG" };
 static const char* kRow2[8] = { "SHIFT","-1","-10","+10","+1","","","SHIFT" };
 
-// externs d’état pour affichage
-extern byte selected_sound, selected_rot;
-extern int bpm, octave;
-extern byte sstep;
-extern uint16_t pattern[16];
-extern int32_t ROTvalue[16][8];
-
 static lv_obj_t* scr_vs = nullptr;
-static lv_obj_t* bars[16];
 static lv_obj_t* pads[16];
-static lv_obj_t* lbl_info;
+static lv_obj_t* bars[16];
+static lv_obj_t* lbl_info = nullptr;
 static lv_timer_t* tmr_vs = nullptr;
 
-static lv_obj_t* make_btn(lv_obj_t* p, const char* t, lv_event_cb_t cb, void* ud, int w, int h, int x, int y){
-  lv_obj_t* b = lv_button_create(p);
-  lv_obj_set_size(b, w, h);
-  lv_obj_align(b, LV_ALIGN_TOP_LEFT, x, y);
-  if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, ud);
-  lv_obj_t* l = lv_label_create(b); lv_label_set_text(l, t); lv_obj_center(l);
-  return b;
-}
-
 static void cb_back_vs(lv_event_t*){
-   extern void build_main_menu();
-   build_main_menu();
+  extern void build_main_menu();
+  build_main_menu();
 }
 
 static void cb_pad (lv_event_t* e){ UI_Compat_Pad ((uint8_t)(uintptr_t)lv_event_get_user_data(e)); }
@@ -49,8 +38,9 @@ static void cb_row2(lv_event_t* e){ UI_Compat_Row2((uint8_t)(uintptr_t)lv_event_
 static void cb_bar (lv_event_t* e){ UI_Compat_Bar ((uint8_t)(uintptr_t)lv_event_get_user_data(e)); }
 
 static void refresh_ui(lv_timer_t*){
-  char info[64]; snprintf(info, sizeof(info), "SND:%u  BAR:%s  BPM:%d  OCT:%d",
-                          (unsigned)selected_sound, kBars[selected_rot % 16], bpm, octave);
+  char info[64];
+  snprintf(info, sizeof(info), "SND:%u  BAR:%s  BPM:%d  OCT:%d",
+           (unsigned)selected_sound, kBars[selected_rot % 16], bpm, octave);
   lv_label_set_text(lbl_info, info);
 
   for (int i=0;i<16;i++){
@@ -68,50 +58,106 @@ static void refresh_ui(lv_timer_t*){
   }
 }
 
+static lv_obj_t* make_btn(lv_obj_t* p, const char* t, lv_event_cb_t cb, void* ud){
+  lv_obj_t* b = lv_button_create(p);
+  lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, ud);
+  lv_obj_set_style_radius(b, 10, 0);
+  lv_obj_set_style_pad_all(b, 6, 0);
+  lv_obj_t* l = lv_label_create(b); lv_label_set_text(l, t); lv_obj_center(l);
+  return b;
+}
+
 void build_vsampler_view(){
   if (tmr_vs) { lv_timer_del(tmr_vs); tmr_vs = nullptr; }
 
   scr_vs = lv_obj_create(NULL);
+  lv_obj_set_size(scr_vs, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_flex_flow(scr_vs, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_all(scr_vs, 8, 0);
   lv_scr_load(scr_vs);
 
-  lv_obj_t* ttl = lv_label_create(scr_vs);
-  lv_label_set_text(ttl, "VSampler");
-  lv_obj_align(ttl, LV_ALIGN_TOP_LEFT, 6, 6);
+  // Header
+  lv_obj_t* header = lv_obj_create(scr_vs);
+  lv_obj_set_width(header, LV_PCT(100));
+  lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
+  lv_obj_set_style_pad_all(header, 6, 0);
+  lv_obj_set_style_pad_column(header, 8, 0);
+  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-  // BACK
-  lv_obj_t* back = lv_button_create(scr_vs);
-  lv_obj_set_size(back, 70, 32);
-  lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -6, 6);
-  lv_obj_add_event_cb(back, cb_back_vs, LV_EVENT_CLICKED, NULL);
-  lv_obj_t* bl = lv_label_create(back); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
+  lv_obj_t* ttl = lv_label_create(header); lv_label_set_text(ttl, "VSampler");
 
+  lv_obj_t* spacer = lv_obj_create(header);
+  lv_obj_set_flex_grow(spacer, 1);
+  lv_obj_set_style_bg_opa(spacer, LV_OPA_0, 0);
+  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* btnBack = lv_button_create(header);
+  lv_obj_add_event_cb(btnBack, cb_back_vs, LV_EVENT_CLICKED, NULL);
+  lv_obj_t* bl = lv_label_create(btnBack); lv_label_set_text(bl, "BACK"); lv_obj_center(bl);
+
+  // Info
   lbl_info = lv_label_create(scr_vs);
-  lv_obj_align(lbl_info, LV_ALIGN_TOP_RIGHT, -6, 28);
+  lv_label_set_text(lbl_info, "SND:0  BAR:SAM  BPM:120  OCT:5");
 
-  // 16 pads (4x4)
-  int px=6, py=40, pw=72, ph=48, gx=6, gy=6;
+  // Grille pads 4x4
+  lv_obj_t* pad_grid = lv_obj_create(scr_vs);
+  lv_obj_set_width(pad_grid, LV_PCT(100));
+  lv_obj_set_flex_flow(pad_grid, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_style_pad_all(pad_grid, 6, 0);
+  lv_obj_set_style_pad_row(pad_grid, 6, 0);
+  lv_obj_set_style_pad_column(pad_grid, 6, 0);
+  lv_obj_clear_flag(pad_grid, LV_OBJ_FLAG_SCROLLABLE);
+
   for (int i=0;i<16;i++){
-    int cx = px + (i%4)*(pw+gx);
-    int cy = py + (i/4)*(ph+gy);
-    pads[i] = make_btn(scr_vs, "", cb_pad, (void*)(uintptr_t)i, pw, ph, cx, cy);
+    pads[i] = make_btn(pad_grid, "", cb_pad, (void*)(uintptr_t)i);
+    lv_obj_set_size(pads[i], LV_PCT(23), 52);  // 4 par ligne
     lv_obj_set_style_bg_opa(pads[i], LV_OPA_30, 0);
     lv_obj_t* num = lv_label_create(pads[i]);
     char t[6]; snprintf(t,sizeof(t), "%d", i);
     lv_label_set_text(num, t); lv_obj_align(num, LV_ALIGN_BOTTOM_RIGHT, -4, -2);
   }
 
-  // rangées de 8 boutons (row1/row2)
-  int bx=300, by=40, bw=80, bh=28, gy2=4;
-  for (int i=0;i<8;i++)  make_btn(scr_vs, kRow1[i], cb_row1, (void*)(uintptr_t)i, bw, bh, bx,  by + i*(bh+gy2));
-  for (int i=0;i<8;i++)  make_btn(scr_vs, kRow2[i], cb_row2, (void*)(uintptr_t)i, bw, bh, bx+86, by + i*(bh+gy2));
+  // Deux colonnes (row1 / row2)
+  lv_obj_t* rows = lv_obj_create(scr_vs);
+  lv_obj_set_width(rows, LV_PCT(100));
+  lv_obj_set_flex_flow(rows, LV_FLEX_FLOW_ROW);
+  lv_obj_set_style_pad_all(rows, 6, 0);
+  lv_obj_set_style_pad_column(rows, 8, 0);
+  lv_obj_clear_flag(rows, LV_OBJ_FLAG_SCROLLABLE);
 
-  // 16 "bars" (sélection param)
-  int rx=6, ry=236, rw=72, rh=30, rgx=6;
-  for (int i=0;i<16;i++){
-    int cx = rx + (i%8)*(rw+rgx);
-    int cy = ry - ((i/8) * (rh + 4));
-    bars[i] = make_btn(scr_vs, kBars[i], cb_bar, (void*)(uintptr_t)i, rw, rh, cx, cy);
+  lv_obj_t* col1 = lv_obj_create(rows);
+  lv_obj_set_width(col1, LV_PCT(48));
+  lv_obj_set_flex_flow(col1, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_all(col1, 0, 0);
+  lv_obj_set_style_pad_row(col1, 4, 0);
+  lv_obj_clear_flag(col1, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* col2 = lv_obj_create(rows);
+  lv_obj_set_width(col2, LV_PCT(48));
+  lv_obj_set_flex_flow(col2, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_all(col2, 0, 0);
+  lv_obj_set_style_pad_row(col2, 4, 0);
+  lv_obj_clear_flag(col2, LV_OBJ_FLAG_SCROLLABLE);
+
+  for (int i=0;i<8;i++){
+    make_btn(col1, kRow1[i], cb_row1, (void*)(uintptr_t)i);
+    make_btn(col2, kRow2[i], cb_row2, (void*)(uintptr_t)i);
   }
 
+  // 16 “bars” (sélection de param)
+  lv_obj_t* bars_row = lv_obj_create(scr_vs);
+  lv_obj_set_width(bars_row, LV_PCT(100));
+  lv_obj_set_flex_flow(bars_row, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_style_pad_all(bars_row, 6, 0);
+  lv_obj_set_style_pad_row(bars_row, 4, 0);
+  lv_obj_set_style_pad_column(bars_row, 4, 0);
+  lv_obj_clear_flag(bars_row, LV_OBJ_FLAG_SCROLLABLE);
+
+  for (int i=0;i<16;i++){
+    bars[i] = make_btn(bars_row, kBars[i], cb_bar, (void*)(uintptr_t)i);
+    lv_obj_set_size(bars[i], LV_PCT(12), 30); // 8 par ligne (wrap)
+  }
+
+  // Timer de refresh
   tmr_vs = lv_timer_create(refresh_ui, 60, NULL);
 }
