@@ -23,9 +23,6 @@ struct WavMeta {
 static bool wav_read_header(File &f, WavMeta &m);
 static void wav_write_header(File &out, const WavMeta &m);
 
-// ==== externs RB / writer ====
-extern RB<int16_t> g_audio_rb;      // défini dans system_tasks.ino
-extern volatile bool g_sdwr_open;   // writer SD détient un fichier ouvert
 // ==== externs ring buffer (wrappers) / writer ====
 extern size_t audio_rb_write(const int16_t* data, size_t n);
 extern size_t audio_rb_avail_to_read(void);
