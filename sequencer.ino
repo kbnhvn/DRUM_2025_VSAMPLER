@@ -105,16 +105,5 @@ void sequencer_start()  { s_running = true;  }
 void sequencer_stop()   { s_running = false; }
 void sequencer_set_bpm(int nbpm) { bpm = nbpm; }
 
-void sequencer_tick(void) {
-  if (bpm <= 0) return;
-  const double interval_us_f = 60.0 * 1000000.0 / (double)(bpm * 24);
-  const uint32_t interval_us = (uint32_t)interval_us_f;
-
-  uint32_t now = micros();
-  if (s_running && (uint32_t)(now - s_last_us) >= interval_us) {
-    s_last_us += interval_us;
-    s_tick = (s_tick + 1) % 24;
-    onSync24Callback(s_tick);
-  }
-}
+extern void sequencer_tick(void) { /* no-op */ }
 

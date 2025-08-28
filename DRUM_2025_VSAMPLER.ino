@@ -3,13 +3,17 @@
 #include <FS.h>
 #define LV_CONF_INCLUDE_SIMPLE 1
 #include <lvgl.h>
+// FreeRTOS & allocation caps (ESP32)
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_heap_caps.h"
 
 // externs déjà existants dans tes autres .ino :
 extern void audio_output_init();
 extern void synthESP32_begin();
 extern void midiUSB_begin();
 extern void midiUSB_poll();
-extern void sequencer_tick();
+extern void onSync24Callback(uint32_t tick); 
 extern void settings_load();
 extern void files_init();
 extern void setSound(byte f);
@@ -18,6 +22,7 @@ extern void setSound(byte f);
 extern void lv_port_init();
 extern void build_main_menu();
 extern void build_vsampler_view();
+extern void ui_theme_dark_apply(lv_obj_t* root);
 
 // ===== Types & Protos partagés (visibles pour tous les .ino agrégés) =====
 // Routage audio
@@ -686,6 +691,7 @@ bool refreshMODES=true;
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////  S E T U P  //////////////////////////////
+extern void system_tasks_init(void);
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -705,25 +711,21 @@ void setup() {
 
   // LVGL (afficheur + touch JC4827W543)
   lv_port_init();
-  ui_theme_dark_init();
 
   // Vue de départ (au choix)
   build_main_menu();
+  ui_theme_dark_apply(lv_scr_act());
+
+  // ---------- Démarrage des tâches système (GUI / MIDI / PPQN) ----------
+  system_tasks_init();
 
  }
 
 //////////////////////////////  L O O P  //////////////////////////////
 
 void loop() {
-  // UI LVGL
-  lv_timer_handler();
-  vTaskDelay(5);
-
-  // Moteur existant
-  midiUSB_poll();
-  sequencer_tick();
-
-  vTaskDelay(1);
+  // Eviter toute concurrence avec les tâches (GUI/audio/PPQN/MIDI)
+  vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 // === Pont de compat : si du code appelle encore Sampler_enter(), on renvoie vers la vue LVGL

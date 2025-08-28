@@ -12,6 +12,7 @@ static lv_obj_t* scr_wifi   = nullptr;
 static lv_obj_t* list_ssid  = nullptr;
 static lv_obj_t* lbl_status = nullptr;
 static lv_timer_t* tmr_conn = nullptr;
+static lv_timer_t* tmr_scan = nullptr;
 
 static String s_sel_ssid;
 
@@ -64,18 +65,36 @@ static void on_ssid_clicked(lv_event_t* e) {
 }
 
 /* ---------- Scan + populate ---------- */
-static void refresh_ssid_list() {
-  lv_obj_clean(list_ssid); // v9: clean children
-  lv_label_set_text(lbl_status, "Scanning...");
-
-  int n = WiFi.scanNetworks();
-  for (int i = 0; i < n; i++) {
+static void populate_ssid_list(int n) {
+  lv_obj_clean(list_ssid); // v9
+  for (int i=0;i<n;i++) {
     const char* name = WiFi.SSID(i).c_str();
-    lv_obj_t* btn = lv_list_add_btn(list_ssid, LV_SYMBOL_WIFI, name); // v9
-    lv_obj_add_event_cb(btn, on_ssid_clicked, LV_EVENT_CLICKED, NULL);
+    lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, name);
+    lv_obj_add_event_cb(btn, [](lv_event_t* ev){
+      lv_obj_t* target = lv_event_get_target_obj(ev);
+      const char* ssid = lv_list_get_button_text(list_ssid, target);
+      if (!ssid) return;
+      s_sel_ssid = ssid;
+      kb_prompt_text("WiFi password", true, "", kb_ok_handler, kb_cancel_handler);
+    }, LV_EVENT_CLICKED, NULL);
   }
-  char t[48]; snprintf(t, sizeof(t), "Found: %d", n);
-  lv_label_set_text(lbl_status, t);
+}
+
+static void refresh_ssid_list_async() {
+  lv_label_set_text(lbl_status, "Scanning...");
+  WiFi.scanDelete();
+  // async, passive, show_hidden=false
+  WiFi.scanNetworks(true /*async*/, true /*show_hidden*/);
+  if (tmr_scan) lv_timer_del(tmr_scan);
+  tmr_scan = lv_timer_create([](lv_timer_t*){
+    int r = WiFi.scanComplete();
+    if (r == WIFI_SCAN_RUNNING) return;
+    if (tmr_scan) { lv_timer_del(tmr_scan); tmr_scan=nullptr; }
+    if (r < 0) { lv_label_set_text(lbl_status, "Scan failed"); return; }
+    populate_ssid_list(r);
+    char t[48]; snprintf(t, sizeof(t), "Found: %d", r);
+    lv_label_set_text(lbl_status, t);
+  }, 300, NULL);
 }
 
 /* ---------- View ---------- */
@@ -117,7 +136,7 @@ void build_wifi_view() {
   lv_obj_clear_flag(tb, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t* bScan = lv_button_create(tb);
-  lv_obj_add_event_cb(bScan, [](lv_event_t*){ refresh_ssid_list(); }, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(bScan, [](lv_event_t*){ refresh_ssid_list_async(); }, LV_EVENT_CLICKED, NULL);
   lv_obj_t* lS = lv_label_create(bScan); lv_label_set_text(lS, "SCAN"); lv_obj_center(lS);
 
   // Status
@@ -129,5 +148,5 @@ void build_wifi_view() {
   lv_obj_set_size(list_ssid, LV_PCT(100), LV_PCT(100));
 
   // Initial scan
-  refresh_ssid_list();
+  refresh_ssid_list_async();
 }
