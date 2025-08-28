@@ -87,13 +87,25 @@ void build_main_menu(){
 
   // Optionnel: About
   make_tile(grid, "About", "Firmware / Build",
-    [](lv_event_t*){
-      lv_obj_t* m = lv_msgbox_create(NULL);
+    [](lv_event_t*) {
+      lv_obj_t* m = lv_msgbox_create(NULL);      // modal
       lv_msgbox_add_title(m, "About");
       lv_msgbox_add_text(m, "DRUM 2025 VSAMPLER\nLVGL v9 UI\nESP32-S3");
-      lv_msgbox_add_footer_button(m, "OK");
-      lv_msgbox_open(m);
-      ui_theme_dark_apply(m)
+
+      lv_obj_t* b_ok = lv_msgbox_add_footer_button(m, "OK");
+      lv_obj_add_event_cb(b_ok, [](lv_event_t* e){
+        lv_obj_t* btn    = lv_event_get_target_obj(e);
+        lv_obj_t* footer = lv_obj_get_parent(btn);
+        lv_obj_t* msg    = lv_obj_get_parent(footer);  // <- remonte au container msgbox
+        lv_obj_del(msg);
+      }, LV_EVENT_CLICKED, NULL);
+
+      lv_msgbox_add_close_button(m);
       lv_obj_center(m);
-    });
+
+      // Thème sombre (si tu l'utilises)
+      extern void ui_theme_dark_apply(lv_obj_t* root);
+      ui_theme_dark_apply(m);
+    }
+  );
 }
