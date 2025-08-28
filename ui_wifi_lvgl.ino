@@ -61,19 +61,29 @@ static void on_ssid_clicked(lv_event_t* e) {
   const char* ssid = lv_list_get_btn_text(list_ssid, btn); // v9 API
   if (!ssid || !*ssid) return;
   s_sel_ssid = ssid;
-  kb_prompt_text("WiFi password", true, "", kb_ok_handler, kb_cancel_handler);
+  kb_prompt_text("WiFi password", false, "", kb_ok_handler, kb_cancel_handler);
 }
 
 /* ---------- Scan + populate ---------- */
 static void populate_ssid_list(int n) {
   lv_obj_clean(list_ssid); // v9
   for (int i=0;i<n;i++) {
-    const char* name = WiFi.SSID(i).c_str();
-    lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, name);
+    String ss = WiFi.SSID(i);            // peut être vide pour “hidden”
+    String label;
+    if (ss.length()) {
+      label = ss;
+    } else {
+      // SSID caché → on montre le BSSID pour identifier
+      label = String("<hidden> ") + WiFi.BSSIDstr(i);
+    }
+    lv_obj_t* btn = lv_list_add_button(list_ssid, LV_SYMBOL_WIFI, label.c_str());
     lv_obj_add_event_cb(btn, [](lv_event_t* ev){
       lv_obj_t* target = lv_event_get_target_obj(ev);
       const char* ssid = lv_list_get_button_text(list_ssid, target);
       if (!ssid) return;
+      // si c’était un hidden, l’utilisateur verra "<hidden> xx:xx..." ; on ne garde dans s_sel_ssid
+      // que l’SSID réel (vide) OU le label visible ? => ici on garde le “visible”.
+      // Si tu veux forcer vide: if (!strncmp(ssid,"<hidden>",8)) s_sel_ssid = "";
       s_sel_ssid = ssid;
       kb_prompt_text("WiFi password", true, "", kb_ok_handler, kb_cancel_handler);
     }, LV_EVENT_CLICKED, NULL);
@@ -146,6 +156,7 @@ void build_wifi_view() {
   // List
   list_ssid = lv_list_create(scr_wifi);
   lv_obj_set_size(list_ssid, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_scrollbar_mode(list_ssid, LV_SCROLLBAR_MODE_AUTO);
 
   // Initial scan
   refresh_ssid_list_async();
