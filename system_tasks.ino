@@ -86,6 +86,16 @@ static TaskHandle_t hTaskMIDI = nullptr;
 static TaskHandle_t hTaskSEQ  = nullptr;
 static TaskHandle_t hTaskSDW  = nullptr;
 
+// ==== C wrappers (visibles depuis d'autres .ino) ====
+extern size_t audio_rb_write(const int16_t* data, size_t n) {
+  if (!g_audio_rb.buf || !data || n==0) return 0;
+  return g_audio_rb.write(data, n);
+}
+extern size_t audio_rb_avail_to_read(void) {
+  if (!g_audio_rb.buf) return 0;
+  return g_audio_rb.avail_to_read();
+}
+
 // GUI: unique propriétaire de LVGL (thread-safe)
 static void task_gui(void*) {
   for (;;) {

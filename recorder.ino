@@ -26,6 +26,10 @@ static void wav_write_header(File &out, const WavMeta &m);
 // ==== externs RB / writer ====
 extern RB<int16_t> g_audio_rb;      // défini dans system_tasks.ino
 extern volatile bool g_sdwr_open;   // writer SD détient un fichier ouvert
+// ==== externs ring buffer (wrappers) / writer ====
+extern size_t audio_rb_write(const int16_t* data, size_t n);
+extern size_t audio_rb_avail_to_read(void);
+extern volatile bool g_sdwr_open;   // writer SD détient un fichier ouvert
 
 // ---------- CONFIG ----------
 static const char* kRecTmpPath = "/samples/rec_tmp.wav";
@@ -172,7 +176,7 @@ void rec_stop(){
 
   // Attendre drain du RB + fermeture du writer
   uint32_t t0 = millis();
-  while (g_audio_rb.avail_to_read() > 0) {
+  while (audio_rb_avail_to_read() > 0) {
     vTaskDelay(pdMS_TO_TICKS(5));
     if (millis() - t0 > 2000) break;    // garde-fou 2s
   }
@@ -209,7 +213,7 @@ void rec_on_rx_samples(const int16_t* interleavedLR, size_t frames){
   if (!s_recActive) return;
   // push vers ring buffer (stéréo → 2 échantillons par frame)
   size_t want   = frames * 2;
-  size_t pushed = g_audio_rb.write(interleavedLR, want);
+  size_t pushed = audio_rb_write(interleavedLR, want);
   s_recBytes   += pushed * sizeof(int16_t); // octets réellement acceptés
 
   // VU RMS simple
