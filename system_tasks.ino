@@ -1,6 +1,7 @@
 // system_tasks.ino
 #include <Arduino.h>
 #include <lvgl.h>
+#include <SD.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
@@ -69,13 +70,21 @@ struct RB {
   }
 };
 
-// (Exemple d’instance ring buffer, non utilisée ici pour ne pas alourdir la build)
-// RB<int16_t> g_audio_rb; // tu pourras l’utiliser plus tard pour SD writer / recorder
+// ======= Ring buffer audio + writer flags =======
+RB<int16_t> g_audio_rb;            // interleaved L,R int16_t
+volatile bool g_sdwr_open = false; // true quand le writer a le fichier ouvert
+
+// Externs utilisés par le writer
+extern "C" {
+  bool        rec_is_active(void);
+  const char* rec_tmp_path(void);
+}
 
 // ======= Tâches =======
 static TaskHandle_t hTaskGUI  = nullptr;
 static TaskHandle_t hTaskMIDI = nullptr;
 static TaskHandle_t hTaskSEQ  = nullptr;
+static TaskHandle_t hTaskSDW  = nullptr;
 
 // GUI: unique propriétaire de LVGL (thread-safe)
 static void task_gui(void*) {
@@ -107,6 +116,36 @@ static void task_ppqn24(void*) {
   }
 }
 
+// SD writer: draine g_audio_rb et append dans /samples/rec_tmp.wav
+static void task_sd_writer(void*) {
+  File out;
+  static int16_t chunk[1024 * 2]; // 1024 frames stéréo
+
+  for (;;) {
+    // Ouvrir si enregistrement actif et pas encore ouvert
+    if (rec_is_active() && !out) {
+      out = SD.open(rec_tmp_path(), FILE_APPEND);
+      g_sdwr_open = out ? true : false;
+    }
+
+    // Draine le RB
+    size_t n = g_audio_rb.read(chunk, sizeof(chunk)/sizeof(chunk[0]));
+    if (n > 0 && out) {
+      out.write((const uint8_t*)chunk, n * sizeof(int16_t));
+    }
+
+    // Si stop & RB vide -> fermer
+    if (!rec_is_active() && out && g_audio_rb.avail_to_read() == 0) {
+      out.flush();
+      out.close();
+      g_sdwr_open = false;
+    }
+
+    if (n == 0) vTaskDelay(pdMS_TO_TICKS(2));
+  }
+}
+
+
 // ======= API =======
 extern void system_tasks_init(void) {
   // GUI → core 1 (APP), priorité moyenne
@@ -116,6 +155,9 @@ extern void system_tasks_init(void) {
   // PPQN24 → core 0 (PRO), priorité moyenne
   if (!hTaskSEQ)  xTaskCreatePinnedToCore(task_ppqn24,"SEQ",  2048, nullptr, 2, &hTaskSEQ,  0);
 
-  // (Optionnel) init d’un gros ring buffer en PSRAM:
-  // if (!g_audio_rb.buf) g_audio_rb.init(1<<16 /*elements*/, true /*psram*/);
+  // Ring buffer en PSRAM (~128 KB): 65 536 éléments int16_t (≈ 32 768 samples stéréo)
+  if (!g_audio_rb.buf) g_audio_rb.init(1<<16 /*elements*/, true /*psram*/);
+
+  // Writer SD → core 0, prio 2
+  if (!hTaskSDW) xTaskCreatePinnedToCore(task_sd_writer, "SD_WR", 4096, nullptr, 2, &hTaskSDW, 0);
 }

@@ -23,6 +23,10 @@ struct WavMeta {
 static bool wav_read_header(File &f, WavMeta &m);
 static void wav_write_header(File &out, const WavMeta &m);
 
+// ==== externs RB / writer ====
+extern RB<int16_t> g_audio_rb;      // défini dans system_tasks.ino
+extern volatile bool g_sdwr_open;   // writer SD détient un fichier ouvert
+
 // ---------- CONFIG ----------
 static const char* kRecTmpPath = "/samples/rec_tmp.wav";
 static const uint16_t WF_MAX_POINTS = 480;     // nb max de points de peak pour l'UI (≈ largeur écran)
@@ -147,14 +151,15 @@ static uint16_t s_vuL=0, s_vuR=0;
 
 void rec_start(){
   if (s_recActive) return;
-  // (ré)ouvre fichier
+  // (ré)écrit header placeholder puis ferme (writer rouvre en append)
   SD.remove(kRecTmpPath);
-  s_recFile = SD.open(kRecTmpPath, FILE_WRITE);
-  if (!s_recFile) return;
+  File f = SD.open(kRecTmpPath, FILE_WRITE);
+  if (!f) return;
 
   // placeholder header, on finalise à la fin
   WavMeta m; m.channels=2; m.sampleRate=44100; m.bitsPerSample=16; m.dataBytes=0;
-  wav_write_header(s_recFile, m);
+  wav_write_header(f, m);
+  f.close();
 
   s_recBytes=0; s_recStartMs=millis(); s_recDurMs=0;
   s_vuL=s_vuR=0;
@@ -165,12 +170,26 @@ void rec_stop(){
   if (!s_recActive) return;
   s_recActive=false;
 
-  // finaliser header
-  uint32_t dataBytes = s_recBytes;
-  s_recFile.seek(0);
-  WavMeta m; m.channels=2; m.sampleRate=44100; m.bitsPerSample=16; m.dataBytes=dataBytes;
-  wav_write_header(s_recFile, m);
-  s_recFile.close();
+  // Attendre drain du RB + fermeture du writer
+  uint32_t t0 = millis();
+  while (g_audio_rb.avail_to_read() > 0) {
+    vTaskDelay(pdMS_TO_TICKS(5));
+    if (millis() - t0 > 2000) break;    // garde-fou 2s
+  }
+  t0 = millis();
+  while (g_sdwr_open) {
+    vTaskDelay(pdMS_TO_TICKS(5));
+    if (millis() - t0 > 500) break;     // garde-fou 0.5s
+  }
+
+  // Finaliser header
+  File f = SD.open(kRecTmpPath, FILE_WRITE);
+  if (f) {
+    f.seek(0);
+    WavMeta m; m.channels=2; m.sampleRate=44100; m.bitsPerSample=16; m.dataBytes=s_recBytes;
+    wav_write_header(f, m);
+    f.close();
+  }
 
   // (Re)construit la waveform pour l’UI
   rec_build_waveform(kRecTmpPath, WF_MAX_POINTS);
@@ -187,10 +206,11 @@ const char* rec_tmp_path(){ return kRecTmpPath; }
 // A appeler par ton driver RX si tu veux alimenter le fichier pendant rec
 // samples interleaved LR, frames = nb d’échantillons stéréo
 void rec_on_rx_samples(const int16_t* interleavedLR, size_t frames){
-  if (!s_recActive || !s_recFile) return;
-  // write
-  s_recFile.write((const uint8_t*)interleavedLR, frames*2*2);
-  s_recBytes += frames*4;
+  if (!s_recActive) return;
+  // push vers ring buffer (stéréo → 2 échantillons par frame)
+  size_t want   = frames * 2;
+  size_t pushed = g_audio_rb.write(interleavedLR, want);
+  s_recBytes   += pushed * sizeof(int16_t); // octets réellement acceptés
 
   // VU RMS simple
   uint64_t accL=0, accR=0;
