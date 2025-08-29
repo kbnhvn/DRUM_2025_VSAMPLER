@@ -1,3 +1,6 @@
+#include "synth_api.h"
+#include <Arduino.h>
+
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
     8.18, 8.66, 9.18, 9.72, 10.3, 10.91, 11.56, 12.25, 12.98, 13.75, 14.57, 15.43,
@@ -11,7 +14,6 @@ const float midiFrequencies[128] = {
     2093.0, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520.0, 3729.31, 3951.07
 };
 
-static void synthESP32_updateVolPan(unsigned char voice);
 void setRandomPitch(byte v);
 
 void synthESP32_begin(){
@@ -379,15 +381,12 @@ void setRandomNotes(byte f){
   setRandomPitch(f);
 }    
 
-#include "synth_api.h"
-#include <Arduino.h>
-
 // ==== externs déjà présents dans ton projet ====
 extern int master_vol;               // défini dans DRUM_2025_VSAMPLER.ino
 extern int master_filter;            // idem
 extern int32_t ROTvalue[16][8];      // [voice]: SAM,INI,END,PIT,RVS,VOL,PAN,FIL
-extern const int16_t* SAMPLES[];     // banques de samples (ROM ou SD)
-extern const uint64_t ENDS[];        // longueurs des samples
+extern int16_t* SAMPLES[];           // banques de samples (ROM ou SD) – runtime (SD)
+extern uint64_t ENDS[];
 extern uint64_t NEWINIS[];           // bornes start (pour afficher/découper)
 extern uint64_t NEWENDS[];           // bornes end
 extern uint64_t samplePos[16];       // position de lecture par voice
@@ -404,11 +403,13 @@ static inline uint64_t clampU64(uint64_t v, uint64_t lo, uint64_t hi){
   return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
-// Mappe 0..2047 -> 0..len-1
+// Mappe 0..2047 -> 0..len-1 (version 64-bit ; __uint128_t indisponible sur Xtensa)
 static inline uint64_t map12b_to_index(int32_t val12, uint64_t len){
-  if (val12 < 0) val12 = 0;
+  if (val12 < 0)    val12 = 0;
   if (val12 > 2047) val12 = 2047;
-  return (uint64_t)(((__uint128_t)val12 * (len ? (len-1) : 0)) / 2047u);
+  const uint64_t L = (len > 0) ? (len - 1) : 0;
+  // Produit max ≈ 2047 * L ; pour des samples audio (quelques M échantillons), ça tient large en 64-bit.
+  return ((uint64_t)val12 * L) / 2047u;
 }
 
 // Calcule un stepSize « pitch » simple (% sample rate), robuste sans table
