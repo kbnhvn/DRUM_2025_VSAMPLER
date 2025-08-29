@@ -2,7 +2,6 @@
 #include <SD.h>
 #include "views.h"
 class Arduino_GFX; extern Arduino_GFX *gfx;
-using namespace ArduinoJson;
 
 // Déclaration avant-usage pour le pointeur global gfx
 #include <vector>
@@ -28,7 +27,8 @@ static int nextPatternNum(){
   } return maxN+1;
 }
 
-static void jsonWriteParams(JsonObject obj, int s){
+template<typename T>
+static void jsonWriteParams(T obj, int s){
   obj["SAM"]=ROTvalue[s][0];
   obj["INI"]=ROTvalue[s][1];
   obj["END"]=ROTvalue[s][2];
@@ -38,7 +38,8 @@ static void jsonWriteParams(JsonObject obj, int s){
   obj["PAN"]=ROTvalue[s][6];
   obj["FIL"]=ROTvalue[s][7];
 }
-static void jsonReadParams(JsonObject obj, int s){
+template<typename T>
+static void jsonReadParams(T obj, int s){
   if(obj.containsKey("SAM")) ROTvalue[s][0]=(int32_t)obj["SAM"];
   if(obj.containsKey("INI")) ROTvalue[s][1]=(int32_t)obj["INI"];
   if(obj.containsKey("END")) ROTvalue[s][2]=(int32_t)obj["END"];
@@ -56,13 +57,13 @@ static void pattern_save_json(){
   File f=SD.open(tmp, FILE_WRITE); if (!f) return;
 
   DynamicJsonDocument doc(16384);
-  JsonArray pads = doc.createNestedArray("pads");
+  auto pads = doc.createNestedArray("pads");
   for(int s=0;s<16;s++){
-    JsonObject po = pads.createNestedObject();
+    auto po = pads.createNestedObject();
     po["name"]=sound_names[s];
-    JsonObject pa = po.createNestedObject("params");
+    auto pa = po.createNestedObject("params");
     jsonWriteParams(pa, s);
-    JsonArray steps=po.createNestedArray("pattern");
+    auto steps=po.createNestedArray("pattern");
     for(int st=0;st<16;st++) steps.add( (pattern[s] >> st) & 0x1 );
   }
   serializeJson(doc,f); f.close(); SD.rename(tmp, fin);
@@ -75,12 +76,12 @@ static bool pattern_load_first(){
   File f=dir.openNextFile(); if (!f) return false;
   DynamicJsonDocument doc(16384);
   if (deserializeJson(doc,f)) { f.close(); return false; }
-  JsonArray pads = doc["pads"];
+  auto pads = doc["pads"].as<ArduinoJson::JsonArray>();
   for(int s=0;s<min(16,(int)pads.size());s++){
-    JsonObject po=pads[s];
+    auto po=pads[s].as<ArduinoJson::JsonObject>();
     sound_names[s]=po["name"].as<String>();
-    JsonObject pa = po["params"]; jsonReadParams(pa, s);
-    JsonArray steps=po["pattern"];
+    auto pa = po["params"]; jsonReadParams(pa, s);
+    auto steps=po["pattern"].as<ArduinoJson::JsonArray>();
     uint16_t m = 0;
     int n = min(16, (int)steps.size());
     for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
