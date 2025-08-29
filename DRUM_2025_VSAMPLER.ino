@@ -64,11 +64,6 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 #define MAX_16 32767
 #define MIN_16 -32767
 
-////////////////////////////// TEXTS
-const String trot[16] = { "SAM", "INI", "END", "PIT", "RVS", "VOL", "PAN", "FIL", "BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"};
-const String tbuttons1[8]       = {"   PAD   ", "  RND P ", " LOAD PS ", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
-const String tbuttons2[8]       = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", "  + 1   ", "        ", "        ", "  SHIFT "};
-
 ////////////////////////////// LCD 
 #include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>

@@ -22,7 +22,7 @@ extern Arduino_GFX *gfx;
 extern int BPOS[48][4];
 
 // Routeur de vues (définition ici, extern ailleurs)
-int currentView = VIEW_MAIN;
+View currentView = VIEW_MAIN;
 
 // Dimensions écran (JC4827W543 = 480×272)
 static const int SCREEN_W = 480;
@@ -88,9 +88,6 @@ void handleTouchMenu(int x,int y){
     drawMenuView(); return;
   }
   // Back (coin haut-droit)
-  if (x>=BACK_X0 && x<=BACK_X1 && y>=BACK_Y0 && y<=BACK_Y1){
-    currentView = VIEW_MAIN;
-    // L’écran principal se redessinera via ta boucle existante (REFRESH_*).
-    return;
+  if (y>=4 && y<=20 && x>=440 && x<=472){ currentView = VIEW_MAIN; return; }
   }
 }

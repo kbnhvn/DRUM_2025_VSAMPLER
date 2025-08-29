@@ -1,9 +1,4 @@
 // Router de vues (défini dans views.h / menu_view.ino)
-extern int currentView; // 0: main, 1: menu, 2: pattern, 3: song
-#define VIEW_MAIN   0
-#define VIEW_MENU   1
-#define VIEW_PATTERN 2
-#define VIEW_SONG   3
 #include "views.h"
 extern View currentView;
 void openPatternView();

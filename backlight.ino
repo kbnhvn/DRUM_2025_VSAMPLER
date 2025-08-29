@@ -1,5 +1,6 @@
 #include <Arduino.h>
-#include <PINS_JC4827W543.h> // GFX_BL
+// Utiliser les objets globaux déclarés dans le .ino principal
+extern Arduino_GFX *gfx;
 
 static const int BL_CH = 0, BL_HZ = 1000, BL_RES = 8;
 static int g_brightness_percent = 100;

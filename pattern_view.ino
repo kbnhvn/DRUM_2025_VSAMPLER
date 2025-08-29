@@ -1,6 +1,7 @@
 #include <ArduinoJson.h>
 #include <SD.h>
 #include "views.h"
+class Arduino_GFX; extern Arduino_GFX *gfx;
 
 // Déclaration avant-usage pour le pointeur global gfx
 #include <vector>
@@ -26,7 +27,7 @@ static int nextPatternNum(){
   } return maxN+1;
 }
 
-static void jsonWriteParams(JsonObject obj, int s){
+static void jsonWriteParams(ArduinoJson::JsonObject obj, int s){
   obj["SAM"]=ROTvalue[s][0];
   obj["INI"]=ROTvalue[s][1];
   obj["END"]=ROTvalue[s][2];
@@ -36,7 +37,7 @@ static void jsonWriteParams(JsonObject obj, int s){
   obj["PAN"]=ROTvalue[s][6];
   obj["FIL"]=ROTvalue[s][7];
 }
-static void jsonReadParams(JsonObject obj, int s){
+static void jsonReadParams(ArduinoJson::JsonObject obj, int s){
   if(obj.containsKey("SAM")) ROTvalue[s][0]=(int32_t)obj["SAM"];
   if(obj.containsKey("INI")) ROTvalue[s][1]=(int32_t)obj["INI"];
   if(obj.containsKey("END")) ROTvalue[s][2]=(int32_t)obj["END"];
@@ -73,18 +74,16 @@ static bool pattern_load_first(){
   File f=dir.openNextFile(); if (!f) return false;
   DynamicJsonDocument doc(16384);
   if (deserializeJson(doc,f)) { f.close(); return false; }
-  JsonArray pads = doc["pads"];
+  ArduinoJson::JsonArray pads = doc["pads"];
   for(int s=0;s<min(16,(int)pads.size());s++){
-    JsonObject po=pads[s];
+    ArduinoJson::JsonObject po=pads[s];
     sound_names[s]=po["name"].as<String>();
-    JsonObject pa = po["params"]; jsonReadParams(pa, s);
-    JsonArray steps = po["pattern"];
+    ArduinoJson::JsonObject pa = po["params"]; jsonReadParams(pa, s);
+    ArduinoJson::JsonArray steps=po["pattern"];
     uint16_t m = 0;
     int n = min(16, (int)steps.size());
-    for (int st=0; st<n; ++st) {
-      if (steps[st].as<int>()) m |= (1 << st);
-    }
-    pattern[s] = m;
+    for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
+    pattern[s]=m;
   }
   f.close(); return true;
 }
