@@ -27,29 +27,6 @@ static int nextPatternNum(){
   } return maxN+1;
 }
 
-template<typename T>
-static void jsonWriteParams(T obj, int s){
-  obj["SAM"]=ROTvalue[s][0];
-  obj["INI"]=ROTvalue[s][1];
-  obj["END"]=ROTvalue[s][2];
-  obj["PIT"]=ROTvalue[s][3];
-  obj["RVS"]=ROTvalue[s][4];
-  obj["VOL"]=ROTvalue[s][5];
-  obj["PAN"]=ROTvalue[s][6];
-  obj["FIL"]=ROTvalue[s][7];
-}
-template<typename T>
-static void jsonReadParams(T obj, int s){
-  if(obj.containsKey("SAM")) ROTvalue[s][0]=(int32_t)obj["SAM"];
-  if(obj.containsKey("INI")) ROTvalue[s][1]=(int32_t)obj["INI"];
-  if(obj.containsKey("END")) ROTvalue[s][2]=(int32_t)obj["END"];
-  if(obj.containsKey("PIT")) ROTvalue[s][3]=(int32_t)obj["PIT"];
-  if(obj.containsKey("RVS")) ROTvalue[s][4]=(int32_t)obj["RVS"];
-  if(obj.containsKey("VOL")) ROTvalue[s][5]=(int32_t)obj["VOL"];
-  if(obj.containsKey("PAN")) ROTvalue[s][6]=(int32_t)obj["PAN"];
-  if(obj.containsKey("FIL")) ROTvalue[s][7]=(int32_t)obj["FIL"];
-}
-
 static void pattern_save_json(){
   if (!SD.exists("/patterns")) SD.mkdir("/patterns");
   String tmp = "/patterns/.tmp.json";
@@ -61,8 +38,19 @@ static void pattern_save_json(){
   for(int s=0;s<16;s++){
     auto po = pads.createNestedObject();
     po["name"]=sound_names[s];
-    auto pa = po.createNestedObject("params");
-    jsonWriteParams(pa, s);
+    // params inline
+    {
+      auto pa = po.createNestedObject("params");
+      pa["SAM"]=ROTvalue[s][0];
+      pa["INI"]=ROTvalue[s][1];
+      pa["END"]=ROTvalue[s][2];
+      pa["PIT"]=ROTvalue[s][3];
+      pa["RVS"]=ROTvalue[s][4];
+      pa["VOL"]=ROTvalue[s][5];
+      pa["PAN"]=ROTvalue[s][6];
+      pa["FIL"]=ROTvalue[s][7];
+    }
+    // steps inline
     auto steps=po.createNestedArray("pattern");
     for(int st=0;st<16;st++) steps.add( (pattern[s] >> st) & 0x1 );
   }
@@ -80,11 +68,25 @@ static bool pattern_load_first(){
   for(int s=0;s<min(16,(int)pads.size());s++){
     auto po=pads[s].as<ArduinoJson::JsonObject>();
     sound_names[s]=po["name"].as<String>();
-    auto pa = po["params"]; jsonReadParams(pa, s);
-    auto steps=po["pattern"].as<ArduinoJson::JsonArray>();
-    uint16_t m = 0;
-    int n = min(16, (int)steps.size());
-    for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
+    // read params inline
+    if (po.containsKey("params")){
+      auto pa = po["params"].as<ArduinoJson::JsonObject>();
+      if(pa.containsKey("SAM")) ROTvalue[s][0] = (int32_t) pa["SAM"];
+      if(pa.containsKey("INI")) ROTvalue[s][1] = (int32_t) pa["INI"];
+      if(pa.containsKey("END")) ROTvalue[s][2] = (int32_t) pa["END"];
+      if(pa.containsKey("PIT")) ROTvalue[s][3] = (int32_t) pa["PIT"];
+      if(pa.containsKey("RVS")) ROTvalue[s][4] = (int32_t) pa["RVS"];
+      if(pa.containsKey("VOL")) ROTvalue[s][5] = (int32_t) pa["VOL"];
+      if(pa.containsKey("PAN")) ROTvalue[s][6] = (int32_t) pa["PAN"];
+      if(pa.containsKey("FIL")) ROTvalue[s][7] = (int32_t) pa["FIL"];
+    }
+    // read steps inline
+    uint16_t m=0;
+    if (po.containsKey("pattern")){
+      auto steps=po["pattern"].as<ArduinoJson::JsonArray>();
+      int n = min(16, (int)steps.size());
+      for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
+    }
     pattern[s]=m;
   }
   f.close(); return true;
