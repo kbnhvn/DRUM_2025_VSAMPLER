@@ -165,7 +165,8 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
 
 void audio_task(void *userData){
   while(1) {
-      write_buffer();      
+      write_buffer();
+      vTaskDelay(1);      
   }
 } 
 
