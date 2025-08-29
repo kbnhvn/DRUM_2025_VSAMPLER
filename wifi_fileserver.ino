@@ -2,7 +2,7 @@
 #include <WebServer.h>
 #include <FS.h>
 #include <SD.h>
-#include "secrets.h"
+#include "secrets_rename.h"
 extern void buildCatalog();
 
 WebServer server(80);
