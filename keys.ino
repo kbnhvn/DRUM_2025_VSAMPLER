@@ -1,8 +1,21 @@
+#include "views.h"
+// Router de vues (défini dans views.h / menu_view.ino)
+extern int currentView; // 0: main, 1: menu, 2: pattern, 3: song
+#define VIEW_MAIN   0
+#define VIEW_MENU   1
+#define VIEW_PATTERN 2
+#define VIEW_SONG   3
 void openPatternView();
 void openMenuView();
 void openSongView();
 
 void DO_KEYPAD(){
+
+  // Si on est dans une vue secondaire → aucune action sur la grille principale
+  if (currentView != VIEW_MAIN) {
+    return;
+  }
+
 
   for (int f=0;f<48;f++) {
     if (trigger_on[f]==1){

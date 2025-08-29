@@ -2,15 +2,42 @@
 #include <WebServer.h>
 #include <FS.h>
 #include <SD.h>
-#include "secrets_rename.h"
 extern void buildCatalog();
+
+#include "secrets.h"
+#ifdef __has_include
+  #if __has_include("secrets.h")
+    #include "secrets.h"
+  #endif
+#endif
+#ifndef WIFI_HOME_SSID
+  #define WIFI_HOME_SSID "your-ssid"
+  #define WIFI_HOME_PSK  "your-pass"
+  #define WIFI_PHONE_SSID "phone-ssid"
+  #define WIFI_PHONE_PSK  "phone-pass"
+#endif
 
 WebServer server(80);
 static bool fileserverOn=false;
+bool isFileServerOn(){ return fileserverOn; }
 
 static String safeName(String n){
   n.replace("\\","/"); int slash=n.lastIndexOf('/'); if (slash>=0) n=n.substring(slash+1);
   n.replace("..",""); n.trim(); return n;
+}
+
+static String htmlEscape(const String& s){
+  String o; o.reserve(s.length()*2);
+  for (size_t i=0;i<s.length();++i){
+    char c=s[i];
+    if (c=='&') o+="&amp;";
+    else if (c=='<') o+="&lt;";
+    else if (c=='>') o+="&gt;";
+    else if (c=='\"') o+="&quot;";
+    else if (c=='\'') o+="&#39;";
+    else o+=c;
+  }
+  return o;
 }
 
 void startFileServer(){
@@ -24,10 +51,10 @@ void startFileServer(){
         File f=root.openNextFile();
         if (!f) break;
         if (!f.isDirectory()){
-          String nm=f.name();
-          html += "<li>"+nm+" "
-                  "<a href='/dl?f="+nm+"'>download</a> "
-                  "<a href='/rm?f="+nm+"'>delete</a></li>";
+          String nm=f.name(); String en=htmlEscape(nm);
+          html += "<li>"+en+" "
+                  "<a href='/dl?f="+en+"'>download</a> "
+                  "<a href='/rm?f="+en+"'>delete</a></li>";
         }
         f.close();
       }
@@ -63,6 +90,7 @@ void startFileServer(){
     server.sendHeader("Location","/"); server.send(302);
   });
 
+  const size_t MAX_UPLOAD = 20UL*1024UL*1024UL; // 20 MB
   server.on("/up", HTTP_POST,
     [](){ server.sendHeader("Location","/rescan"); server.send(303); },
     [](){
@@ -75,7 +103,10 @@ void startFileServer(){
         tmpPath = String("/samples/.tmp.")+finalName;
         uf = SD.open(tmpPath, FILE_WRITE);
       } else if (up.status == UPLOAD_FILE_WRITE) {
-        if (uf) uf.write(up.buf, up.currentSize);
+        if (uf) {
+          if (uf.size() + up.currentSize > MAX_UPLOAD) { uf.close(); SD.remove(tmpPath); return; }
+          uf.write(up.buf, up.currentSize);
+        }
       } else if (up.status == UPLOAD_FILE_END) {
         if (uf) { uf.close(); SD.rename(tmpPath, String("/samples/")+finalName); }
       }

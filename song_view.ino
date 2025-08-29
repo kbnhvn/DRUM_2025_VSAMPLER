@@ -43,3 +43,13 @@ void openSongView(){
   drawButtonBox(240,70,180,80, DARKGREY, "Load");
   drawButtonBox(440,70,180,80, DARKGREY, "Clear");
 }
+
+void handleTouchSong(int x,int y){
+  if (y>=70 && y<=150){
+    if (x>=40 && x<=220){ song_save_json(); return; }
+    if (x>=240 && x<=420){ song_load_first(); return; }
+    if (x>=440 && x<=620){ /* clear song */ extern String songSeq[]; extern int songLen; songLen=0; return; }
+  }
+  // Back
+  if (y>=4 && y<=20 && x>=600 && x<=632){ extern int currentView; currentView = VIEW_MAIN; return; }
+}

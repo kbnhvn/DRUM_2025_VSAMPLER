@@ -1,18 +1,13 @@
 #include <ArduinoJson.h>
 #include <SD.h>
-
+ 
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
+ 
+extern uint16_t pattern[16];      // bitmask 16 steps / pad
+extern int32_t  ROTvalue[16][8];  // SAM,INI,END,PIT,RVS,VOL,PAN,FIL
+extern String   sound_names[];    // nom du sample pour affichage
 
-extern byte   pattern[16][16];
-extern String sound_names[];
-
-extern uint32_t SAMvalue[16], ENDvalue[16];
-extern int16_t  PITvalue[16];
-extern uint8_t  RVSvalue[16], VOLvalue[16];
-extern int8_t   PANvalue[16];
-extern uint16_t FILvalue[16], BPMvalue[16];
-extern uint8_t  TRPvalue[16], MFIvalue[16], OCTvalue[16], HPIvalue[16], SYNvalue[16], SCAvalue[16];
 
 static int nextPatternNum(){
   if (!SD.exists("/patterns")) SD.mkdir("/patterns");
@@ -25,25 +20,24 @@ static int nextPatternNum(){
 }
 
 static void jsonWriteParams(JsonObject obj, int s){
-  obj["SAM"]=SAMvalue[s]; obj["END"]=ENDvalue[s]; obj["PIT"]=PITvalue[s]; obj["RVS"]=RVSvalue[s];
-  obj["VOL"]=VOLvalue[s]; obj["PAN"]=PANvalue[s]; obj["FIL"]=FILvalue[s]; obj["BPM"]=BPMvalue[s];
-  obj["TRP"]=TRPvalue[s]; obj["MFI"]=MFIvalue[s]; obj["OCT"]=OCTvalue[s]; obj["HPI"]=HPIvalue[s]; obj["SYN"]=SYNvalue[s]; obj["SCA"]=SCAvalue[s];
+  obj["SAM"]=ROTvalue[s][0];
+  obj["INI"]=ROTvalue[s][1];
+  obj["END"]=ROTvalue[s][2];
+  obj["PIT"]=ROTvalue[s][3];
+  obj["RVS"]=ROTvalue[s][4];
+  obj["VOL"]=ROTvalue[s][5];
+  obj["PAN"]=ROTvalue[s][6];
+  obj["FIL"]=ROTvalue[s][7];
 }
 static void jsonReadParams(JsonObject obj, int s){
-  if(obj.containsKey("SAM")) SAMvalue[s]=(uint32_t)obj["SAM"];
-  if(obj.containsKey("END")) ENDvalue[s]=(uint32_t)obj["END"];
-  if(obj.containsKey("PIT")) PITvalue[s]=(int16_t)obj["PIT"];
-  if(obj.containsKey("RVS")) RVSvalue[s]=(uint8_t)obj["RVS"];
-  if(obj.containsKey("VOL")) VOLvalue[s]=(uint8_t)obj["VOL"];
-  if(obj.containsKey("PAN")) PANvalue[s]=(int8_t)obj["PAN"];
-  if(obj.containsKey("FIL")) FILvalue[s]=(uint16_t)obj["FIL"];
-  if(obj.containsKey("BPM")) BPMvalue[s]=(uint16_t)obj["BPM"];
-  if(obj.containsKey("TRP")) TRPvalue[s]=(uint8_t)obj["TRP"];
-  if(obj.containsKey("MFI")) MFIvalue[s]=(uint8_t)obj["MFI"];
-  if(obj.containsKey("OCT")) OCTvalue[s]=(uint8_t)obj["OCT"];
-  if(obj.containsKey("HPI")) HPIvalue[s]=(uint8_t)obj["HPI"];
-  if(obj.containsKey("SYN")) SYNvalue[s]=(uint8_t)obj["SYN"];
-  if(obj.containsKey("SCA")) SCAvalue[s]=(uint8_t)obj["SCA"];
+  if(obj.containsKey("SAM")) ROTvalue[s][0]=(int32_t)obj["SAM"];
+  if(obj.containsKey("INI")) ROTvalue[s][1]=(int32_t)obj["INI"];
+  if(obj.containsKey("END")) ROTvalue[s][2]=(int32_t)obj["END"];
+  if(obj.containsKey("PIT")) ROTvalue[s][3]=(int32_t)obj["PIT"];
+  if(obj.containsKey("RVS")) ROTvalue[s][4]=(int32_t)obj["RVS"];
+  if(obj.containsKey("VOL")) ROTvalue[s][5]=(int32_t)obj["VOL"];
+  if(obj.containsKey("PAN")) ROTvalue[s][6]=(int32_t)obj["PAN"];
+  if(obj.containsKey("FIL")) ROTvalue[s][7]=(int32_t)obj["FIL"];
 }
 
 static void pattern_save_json(){
@@ -60,7 +54,7 @@ static void pattern_save_json(){
     JsonObject pa = po.createNestedObject("params");
     jsonWriteParams(pa, s);
     JsonArray steps=po.createNestedArray("pattern");
-    for(int st=0;st<16;st++) steps.add(pattern[s][st]);
+    for(int st=0;st<16;st++) steps.add( (pattern[s] >> st) & 0x1 );
   }
   serializeJson(doc,f); f.close(); SD.rename(tmp, fin);
 }
@@ -78,7 +72,11 @@ static bool pattern_load_first(){
     sound_names[s]=po["name"].as<String>();
     JsonObject pa = po["params"]; jsonReadParams(pa, s);
     JsonArray steps=po["pattern"];
-    for(int st=0;st<min(16,(int)steps.size());st++) pattern[s][st]=steps[st];
+    uint16_t m=0;
+    for(int st=0;st<min(16,(int)steps.size());st++){
+      if (steps[st]) m |= (1<<st);
+    }
+    pattern[s]=m;
   }
   f.close(); return true;
 }
@@ -90,4 +88,14 @@ void openPatternView(){
   drawButtonBox(240,70,180,80, DARKGREY, "New");
   drawButtonBox(440,70,180,80, DARKGREY, "Load");
   // Branches via DO_KEYPAD (boutons dédiés) ou dispatcher tactile si désiré
+}
+
+void handleTouchPattern(int x,int y){
+  if (y>=70 && y<=150){
+    if (x>=40 && x<=220){ pattern_save_json(); return; }
+    if (x>=240 && x<=420){ pattern_new(); return; }
+    if (x>=440 && x<=620){ pattern_load_first(); return; }
+  }
+  // Back
+  if (y>=4 && y<=20 && x>=600 && x<=632){ extern int currentView; currentView = VIEW_MAIN; return; }
 }
