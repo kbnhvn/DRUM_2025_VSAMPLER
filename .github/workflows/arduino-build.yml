@@ -33,13 +33,6 @@ jobs:
           arduino-cli lib install "Adafruit ADS1X15"
           arduino-cli lib install "U8g2"
 
-      - name: Apply patches
-        run: |
-          for patch in *.patch; do
-            echo "Applying $patch"
-            git apply "$patch" || exit 1
-          done
-
       - name: Compile the Sketch
         run: |
           arduino-cli compile \
