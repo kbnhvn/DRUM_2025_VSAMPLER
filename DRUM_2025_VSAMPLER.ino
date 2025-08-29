@@ -9,13 +9,28 @@
 // includes
 #include <Arduino.h>
 
+
+// --- Runtime samples from SD ---
+#ifndef USE_SD_SAMPLES
+  #define USE_SD_SAMPLES 1
+#endif
+
+// Forward decls for new views/server/backlight
+void openMenuView();
+void openPatternView();
+void openSongView();
+void openBrowserView();
+void loopWeb();
+void backlight_init();
+void setBacklightPercent(int p);
+int  getBacklightPercent();
+
 //#define TESTING 1
 
 //#define mylcd_type1
 #define mylcd_type2
 // if you don't have a ADS1115 and rotary comment next line
 //#define ads_ok
-
 
 int32_t muestra;
 #define SAMPLE_RATE 44100         // Frecuencia de muestreo (44.1 kHz)
@@ -40,41 +55,9 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 // Array para almacenar los nombres de los archivos WAV
 //String soundFiles[MAX_SOUNDS];
 
-/////////////////////////////// I2C POTS ADS1015
-#include <Adafruit_ADS1X15.h>
-#ifdef mylcd_type1
-  #define SDA_2 15  
-  #define SCL_2 16 
-#endif
-#ifdef mylcd_type2
-  #define SDA_2 17  
-  #define SCL_2 18 
-#endif
-
-TwoWire I2C_2 = TwoWire(1); // 2nd I2C port
-Adafruit_ADS1015 ads;
-int16_t adc0=0;
-int16_t adc1=0;
-int16_t adc2=0;
-int16_t adc3=0; 
-int16_t tmp_adc1;
-int16_t old_adc0=0;
-int16_t old_adc1=0;
-int16_t old_adc2=0;
-int16_t old_adc3=0;
-
-unsigned long previousMillis = 0;
-const long interval = 100; 
-
-int16_t adcValue0 = 0;
-int16_t adcValue1 = 0;
-int16_t adcValue2 = 0;
-int16_t adcValue3 = 0;
-
 ////////////////////////////// SPIFFS
 #include <FS.h>
 #include <SPIFFS.h>
-
 
 ////////////////////////////// SYNTH
 //#define SAMPLE_RATE 44100
@@ -232,227 +215,28 @@ int cox, coy, coz;
 #define tMlast 22
 #define tRndS2 23
 
+const String trot[16] = { "SAM","INI","END","PIT","RVS","VOL","PAN","FIL","BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"};
+const String tbuttons1[8] = {"   PAD   ", "  RND P ", "  LO...", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
+const String tbuttons2[8] = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", "  + 1   ", "  PTRN  ", "  MENU  ", "  SHIFT "};
 
-uint64_t NEWENDS[50];
-uint64_t NEWINIS[50];
+#if (USE_SD_SAMPLES)
+  #define BANK_SIZE 256
+  extern int16_t* SAMPLES[BANK_SIZE];
+  extern uint64_t ENDS[BANK_SIZE];
+  extern String   sound_names[BANK_SIZE];
+  extern void initSD();
+  extern void buildCatalog();
+  extern void assignSampleToSlot(int catIndex, int slot);
+#endif
+
+
+uint64_t NEWENDS[256];
+uint64_t NEWINIS[256];
 
 byte latch[16];
 
 uint64_t samplePos[16];
 uint64_t stepSize[16];
-
-////////////////////////////// SOUNDS
-
-#include "SOUNDS/zSAMPLE00.h"
-#include "SOUNDS/zSAMPLE01.h"
-#include "SOUNDS/zSAMPLE02.h"
-#include "SOUNDS/zSAMPLE03.h"
-#include "SOUNDS/zSAMPLE04.h"
-#include "SOUNDS/zSAMPLE05.h"
-#include "SOUNDS/zSAMPLE06.h"
-#include "SOUNDS/zSAMPLE07.h"
-#include "SOUNDS/zSAMPLE08.h"
-#include "SOUNDS/zSAMPLE09.h"
-#include "SOUNDS/zSAMPLE10.h"
-#include "SOUNDS/zSAMPLE11.h"
-#include "SOUNDS/zSAMPLE12.h"
-#include "SOUNDS/zSAMPLE13.h"
-#include "SOUNDS/zSAMPLE14.h"
-#include "SOUNDS/zSAMPLE15.h"
-#include "SOUNDS/zSAMPLE16.h"
-#include "SOUNDS/zSAMPLE17.h"
-#include "SOUNDS/zSAMPLE18.h"
-#include "SOUNDS/zSAMPLE19.h"
-#include "SOUNDS/zSAMPLE20.h"
-#include "SOUNDS/zSAMPLE21.h"
-#include "SOUNDS/zSAMPLE22.h"
-#include "SOUNDS/zSAMPLE23.h"
-#include "SOUNDS/zSAMPLE24.h"
-#include "SOUNDS/zSAMPLE25.h"
-#include "SOUNDS/zSAMPLE26.h"
-#include "SOUNDS/zSAMPLE27.h"
-#include "SOUNDS/zSAMPLE28.h"
-#include "SOUNDS/zSAMPLE29.h"
-#include "SOUNDS/zSAMPLE30.h"
-#include "SOUNDS/zSAMPLE31.h"
-#include "SOUNDS/SYNTH1.h"
-#include "SOUNDS/zSAMPLE33.h"
-#include "SOUNDS/zSAMPLE34.h"
-#include "SOUNDS/zSAMPLE35.h"
-#include "SOUNDS/zSAMPLE36.h"
-#include "SOUNDS/zSAMPLE37.h"
-#include "SOUNDS/zSAMPLE38.h"
-#include "SOUNDS/zSAMPLE39.h"
-#include "SOUNDS/SYNTH4.h" 
-#include "SOUNDS/zSAMPLE41.h"
-#include "SOUNDS/zSAMPLE42.h"
-#include "SOUNDS/SYNTH6.h"
-#include "SOUNDS/zSAMPLE44.h"
-#include "SOUNDS/zSAMPLE45.h"
-#include "SOUNDS/zSAMPLE46.h"
-#include "SOUNDS/zSAMPLE47.h"
-#include "SOUNDS/zSAMPLE48.h"
-#include "SOUNDS/zSAMPLE49.h"                          
-
-const String sound_names[50] = { 
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-    "20",
-    "21",
-    "22",
-    "23",
-    "24",
-    "25",
-    "26",
-    "27",
-    "28",
-    "29",
-    "30",
-    "31",
-    "SYNTH 1",
-    "33",
-    "34",
-    "35",
-    "36",
-    "37",
-    "38",
-    "39",
-    "SYNTH 4",
-    "SAMPLE41",
-    "42",
-    "SYNTH 6",
-    "44",
-    "45",
-    "46",
-    "47",
-    "48",
-    "49"
-};
-
-const uint64_t ENDS[50]={
-    (sizeof(SAMPLE00)/ sizeof(SAMPLE00[0]))-1,
-    (sizeof(SAMPLE01)/ sizeof(SAMPLE01[0]))-1,
-    (sizeof(SAMPLE02)/ sizeof(SAMPLE02[0]))-1,
-    (sizeof(SAMPLE03)/ sizeof(SAMPLE03[0]))-1,
-    (sizeof(SAMPLE04)/ sizeof(SAMPLE04[0]))-1,
-    (sizeof(SAMPLE05)/ sizeof(SAMPLE05[0]))-1,
-    (sizeof(SAMPLE06)/ sizeof(SAMPLE06[0]))-1,
-    (sizeof(SAMPLE07)/ sizeof(SAMPLE07[0]))-1,
-    (sizeof(SAMPLE08)/ sizeof(SAMPLE08[0]))-1,
-    (sizeof(SAMPLE09)/ sizeof(SAMPLE09[0]))-1,
-    (sizeof(SAMPLE10)/ sizeof(SAMPLE10[0]))-1,
-    (sizeof(SAMPLE11)/ sizeof(SAMPLE11[0]))-1,
-    (sizeof(SAMPLE12)/ sizeof(SAMPLE12[0]))-1,
-    (sizeof(SAMPLE13)/ sizeof(SAMPLE13[0]))-1,
-    (sizeof(SAMPLE14)/ sizeof(SAMPLE14[0]))-1,
-    (sizeof(SAMPLE15)/ sizeof(SAMPLE15[0]))-1,
-    (sizeof(SAMPLE16)/ sizeof(SAMPLE16[0]))-1, 
-    (sizeof(SAMPLE17)/ sizeof(SAMPLE17[0]))-1,
-    (sizeof(SAMPLE18)/ sizeof(SAMPLE18[0]))-1,
-    (sizeof(SAMPLE19)/ sizeof(SAMPLE19[0]))-1, 
-    (sizeof(SAMPLE20)/ sizeof(SAMPLE20[0]))-1,
-    (sizeof(SAMPLE21)/ sizeof(SAMPLE21[0]))-1,             
-    (sizeof(SAMPLE22)/ sizeof(SAMPLE22[0]))-1, 
-    (sizeof(SAMPLE23)/ sizeof(SAMPLE23[0]))-1, 
-    (sizeof(SAMPLE24)/ sizeof(SAMPLE24[0]))-1, 
-    (sizeof(SAMPLE25)/ sizeof(SAMPLE25[0]))-1,
-    (sizeof(SAMPLE26)/ sizeof(SAMPLE26[0]))-1,
-    (sizeof(SAMPLE27)/ sizeof(SAMPLE27[0]))-1, 
-    (sizeof(SAMPLE28)/ sizeof(SAMPLE28[0]))-1, 
-    (sizeof(SAMPLE29)/ sizeof(SAMPLE29[0]))-1, 
-    (sizeof(SAMPLE30)/ sizeof(SAMPLE30[0]))-1, 
-    (sizeof(SAMPLE31)/ sizeof(SAMPLE31[0]))-1,
-    (sizeof(SYNTH1)/ sizeof(SYNTH1[0]))-1,
-    (sizeof(SAMPLE33)/ sizeof(SAMPLE33[0]))-1,
-    (sizeof(SAMPLE34)/ sizeof(SAMPLE34[0]))-1,
-    (sizeof(SAMPLE35)/ sizeof(SAMPLE35[0]))-1, 
-    (sizeof(SAMPLE36)/ sizeof(SAMPLE36[0]))-1,
-    (sizeof(SAMPLE37)/ sizeof(SAMPLE37[0]))-1, 
-    (sizeof(SAMPLE38)/ sizeof(SAMPLE38[0]))-1, 
-    (sizeof(SAMPLE39)/ sizeof(SAMPLE39[0]))-1, 
-    (sizeof(SYNTH4)/ sizeof(SYNTH4[0]))-1, 
-    (sizeof(SAMPLE41)/ sizeof(SAMPLE41[0]))-1,
-    (sizeof(SAMPLE42)/ sizeof(SAMPLE42[0]))-1,
-    (sizeof(SYNTH6)/ sizeof(SYNTH6[0]))-1,
-    (sizeof(SAMPLE44)/ sizeof(SAMPLE44[0]))-1,
-    (sizeof(SAMPLE45)/ sizeof(SAMPLE45[0]))-1,
-    (sizeof(SAMPLE46)/ sizeof(SAMPLE46[0]))-1,
-    (sizeof(SAMPLE47)/ sizeof(SAMPLE47[0]))-1, 
-    (sizeof(SAMPLE48)/ sizeof(SAMPLE48[0]))-1, 
-    (sizeof(SAMPLE49)/ sizeof(SAMPLE49[0]))-1                            
-};
-
-const int16_t* SAMPLES[50] = {
-    SAMPLE00,
-    SAMPLE01,
-    SAMPLE02,
-    SAMPLE03,
-    SAMPLE04,
-    SAMPLE05,
-    SAMPLE06,
-    SAMPLE07,
-    SAMPLE08,
-    SAMPLE09,
-    SAMPLE10,
-    SAMPLE11,
-    SAMPLE12,
-    SAMPLE13,
-    SAMPLE14,
-    SAMPLE15,
-    SAMPLE16,
-    SAMPLE17,
-    SAMPLE18,
-    SAMPLE19, 
-    SAMPLE20,
-    SAMPLE21,             
-    SAMPLE22,             
-    SAMPLE23,             
-    SAMPLE24,             
-    SAMPLE25,             
-    SAMPLE26,             
-    SAMPLE27,             
-    SAMPLE28,             
-    SAMPLE29,             
-    SAMPLE30,             
-    SAMPLE31,
-    SYNTH1,   
-    SAMPLE33,    
-    SAMPLE34,
-    SAMPLE35,
-    SAMPLE36,             
-    SAMPLE37,             
-    SAMPLE38,             
-    SAMPLE39,             
-    SYNTH4,             
-    SAMPLE41,
-    SAMPLE42,   
-    SYNTH6,    
-    SAMPLE44,
-    SAMPLE45, 
-    SAMPLE46,             
-    SAMPLE47,             
-    SAMPLE48,             
-    SAMPLE49                      
-};
-
 
 // I2s
 
@@ -579,16 +363,6 @@ const char* nombresEscalas[] = {
   "Locrio"
 };
 ////////////////////////////// ROTARY
-#ifdef mylcd_type1 
-  #define CLK 9 // CLK ENCODER 
-  #define DT 14 // DT ENCODER
-  const byte pinBR1=5;
-#endif
-#ifdef mylcd_type2 
-  #define CLK 7 // CLK ENCODER 
-  #define DT 6 // DT ENCODER
-  const byte pinBR1=15;
-#endif
 
 byte ENC_PORT1=0;
 int counter1=0;
@@ -750,17 +524,7 @@ void setup() {
   
   // Iniciar el primer puerto I2C
   Wire.begin(TOUCH_SDA, TOUCH_SCL,400000);
-  #ifdef ads_ok
-  // Iniciar el segundo puerto I2C
-  I2C_2.begin(SDA_2, SCL_2, 400000);
 
-  // Iniciar el ADS1015 en el segundo puerto I2C
-  if (!ads.begin(0x48, &I2C_2)) { // Dirección I2C por defecto del ADS1015/ADS1115
-    Serial.println("ADS1015 not found.");
-  } else {
-    Serial.println("ADS1015 init OK.");
-  }
-  #endif
 //........................................................................................................................
 // LCD and TOUCH
   // Init Display
@@ -771,10 +535,7 @@ void setup() {
   }
   gfx->fillScreen(BLACK);
 
-  #ifdef GFX_BL
-    pinMode(GFX_BL, OUTPUT);
-    digitalWrite(GFX_BL, HIGH);
-  #endif
+  backlight_init();
 
   gfx->setFont(u8g2_font_5x8_mr);
   gfx->setUTF8Print(true);
@@ -827,9 +588,8 @@ void setup() {
     Serial.println("Error inicializando la tarjeta SD por SPI");
     while (1);
   }
-  Serial.println("Tarjeta SD inicializada correctamente");
-  // Listar archivos .wav desde el directorio raíz
-  //listWavFiles("/");
+  Serial.println("SD init OK");
+  buildCatalog();
 
   ///////////////////////////////////////////////////////
 
@@ -851,23 +611,6 @@ void setup() {
   // initTimer(onSync24);
   // setBPM(120);  // 120 BPM
 
-//    // demo pattern
-//    pattern[0]=B00010001<<8 | B10010001;
-//    pattern[2]=B11000101<<8 | B10101011;
-//    pattern[6]=B10110101<<8 | B10001111;
-//    pattern[3]=B00000110<<8 | B00000000;
-//    pattern[7]=B00000000<<8 | B01001000;
-//    // start playing demo pattern
-//    uClock.start();
-//    sstep=firstStep;
-//    refreshPADSTEP=true; 
-//    playing=true;
-  #ifdef ads_ok
-  // Rotary
-  pinMode(pinBR1,INPUT_PULLUP);
-  pinMode(CLK,INPUT_PULLUP);
-  pinMode(DT,INPUT_PULLUP);
-  #endif
 //........................................................................................................................
 //
 //   B L E M I D I
@@ -883,7 +626,6 @@ void setup() {
   //   Serial.println("Disconnected");
   // });
 
-
 //........................................................................................................................
 
   select_rot();
@@ -897,6 +639,7 @@ void setup() {
 
 void loop() {
 
+  loopWeb();
   // flag to do things outside sequencer timer isr
   if (load_flag){
     load_flag=false;
@@ -915,41 +658,6 @@ void loop() {
     refreshPADSTEP=true;
   }
 
-  // if (sync_flag){ 
-  //     sync_flag=false;
-  //     if (sync_state==1){   // if this machine is master
-  //       Serial1.write(11);
-  //     }
-  // }
-  // if (sync_state==2){ // if this machine is slave
-  //   if (Serial1.available() > 0){
-  //     byte var=Serial1.read();
-  //     if (var==11){
-  //       if (pre_playing){
-  //         sstep=firstStep;
-  //         pre_playing=false;
-  //         uClock.start();
-  //         refreshPADSTEP=true;          
-  //       }
-  //     }
-  //   }
-  // }
-
-  // Read MIDI ports
-  //MIDI.read();
-  #ifdef ads_ok
-  shiftR1=!digitalRead(pinBR1);
-  #endif
-
-  // if (shiftR1!=old_shiftR1){
-  //   old_shiftR1=shiftR1;
-  //   drawScreen1b();
-  //   //Serial.println(shiftR1);
-  //   if (!shiftR1) refreshPATTERN=true;
-  // }
-  #ifdef ads_ok
-  READ_ENCODERS();
-  #endif
   read_touch();
   DO_KEYPAD();
   REFRESH_KEYS();
@@ -957,14 +665,6 @@ void loop() {
 
   showLastTouched();
   clearLastTouched();
-  
-  #ifdef ads_ok
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    READ_POTS(); 
-  }
-  #endif
 
   // Weird code!!!! Segunda carga de setsoud porque con la primera no se generan bien el inicio y el fin de sample y el volumen/pan. Parece que no le da tiempo.
   if (flag_ss=true){

@@ -1,3 +1,6 @@
+void openPatternView();
+void openMenuView();
+void openSongView();
 
 void DO_KEYPAD(){
 
@@ -281,17 +284,8 @@ void DO_KEYPAD(){
               break;
             // Song
             case 23:
-              if (modeZ==tMemo) {
-                modeZ=tMfirs;
-              } else if (modeZ==tMfirs) {
-                modeZ=tMlast;
-              } else if (modeZ==tMlast) {
-                modeZ=tMemo;
-              } else {
-                songing=!songing;
-                if (recording) songing=false; // if recording I cant set song mode
-              }
-              break;                      
+              openSongView();
+              break;
           }  
 
         // shift 
@@ -373,6 +367,12 @@ void DO_KEYPAD(){
               counter1=counter1+1;
             }
             do_rot();
+            break;
+          case 29:
+            openPatternView();
+            break;
+          case 30:
+            openMenuView();
             break;
           case 31:
             shifting=!shifting;

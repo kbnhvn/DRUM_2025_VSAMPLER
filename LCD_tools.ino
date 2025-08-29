@@ -725,3 +725,31 @@ void drawWaveform() {
   //setSound(selected_sound);
 
 }
+
+//////////////////// New UI helpers ////////////////////
+void drawTopBar(const char* title, bool showBack) {
+  gfx->fillRect(0, 0, 640, 24, DARKGREY);
+  gfx->setCursor(8, 16);
+  gfx->setTextColor(WHITE, DARKGREY);
+  gfx->print(title);
+  if (showBack) {
+    gfx->drawRect(600, 4, 32, 16, WHITE);
+    gfx->setCursor(608, 16);
+    gfx->setTextColor(WHITE, DARKGREY);
+    gfx->print("<");
+  }
+}
+
+void drawButtonBox(int x,int y,int w,int h, int color, const char* texto){
+  gfx->drawRect(x + 3, y + 3, w - 7, h - 7, color);
+  if (color != DARKGREY) {
+    gfx->drawRect(x + 4, y + 4, w - 9, h - 9, color);
+    gfx->drawRect(x + 5, y + 5, w - 11, h - 11, color);
+  } else {
+    gfx->drawRect(x + 4, y + 4, w - 9, h - 9, BLACK);
+    gfx->drawRect(x + 5, y + 5, w - 11, h - 11, BLACK);
+  }
+  gfx->setTextColor(color, BLACK);
+  gfx->setCursor(x + 8, y + (h/2) + 3);
+  gfx->print(texto);
+}

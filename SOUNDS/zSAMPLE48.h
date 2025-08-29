@@ -1,1 +1,0 @@
-const int16_t SAMPLE48[] PROGMEM = { 0 };
