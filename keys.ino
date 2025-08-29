@@ -5,6 +5,17 @@ void openPatternView();
 void openMenuView();
 void openSongView();
 
+// Prototypes synth/util utilisés ici
+void synthESP32_TRIGGER_P(unsigned char voice, int note);
+void synthESP32_TRIGGER(unsigned char voice);
+void setSound(byte voice);
+void select_rot();
+void do_rot();
+void setRandomVoice(byte v);
+void setRandomVoice2(byte v);
+void setRandomPattern(byte v);
+void setRandomNotes(byte v);
+
 void DO_KEYPAD(){
 
   // Si on est dans une vue secondaire → aucune action sur la grille principale

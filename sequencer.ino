@@ -37,6 +37,18 @@
 //   timer_disable_intr(TIMER_GROUP, TIMER_INDEX);
 // }
 
+// void onSync24(); // si défini ici, OK
+
+// Petits prototypes utilisés par le callback et le sequencer
+void synthESP32_TRIGGER(unsigned char voice);
+void synthESP32_TRIGGER_P(unsigned char voice, int note);
+void tic();
+extern bool playing;
+extern byte fx1;
+extern byte selected_sound;
+extern bool clearPADSTEP;
+
+
 void IRAM_ATTR tic(){  
   if (sstep==firstStep){
     sync_flag=true;

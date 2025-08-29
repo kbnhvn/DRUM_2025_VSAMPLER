@@ -11,6 +11,10 @@ const float midiFrequencies[128] = {
     2093.0, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520.0, 3729.31, 3951.07
 };
 
+void audio_task(void*); // tâche audio FreeRTOS
+static void synthESP32_updateVolPan(unsigned char voice);
+void setRandomPitch(byte v);
+
 void synthESP32_begin(){
 
   // 16 filters + master L & R (18)

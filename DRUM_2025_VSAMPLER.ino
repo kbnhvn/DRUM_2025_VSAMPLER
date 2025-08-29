@@ -9,6 +9,15 @@
 // includes
 #include <Arduino.h>
 
+// --- Prototypes nécessaires (déclarés ailleurs) ---
+void resetGT911();
+void read_touch();
+void synthESP32_begin();
+void setSound(byte voice);
+void synthESP32_setMVol(int vol);
+void synthESP32_setMFilter(int val);
+void select_rot();
+void onSync24Callback(uint32_t tick); // callback uClock
 
 // --- Runtime samples from SD ---
 #ifndef USE_SD_SAMPLES

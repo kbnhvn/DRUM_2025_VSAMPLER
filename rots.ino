@@ -12,6 +12,8 @@ extern int old_counter1;
 extern byte   sync_state;      // défini byte dans .ino principal
 extern uint8_t selected_scale; // défini uint8_t
 extern byte   selected_rot;    // défini byte
+void synthESP32_setMVol(int vol);
+void synthESP32_setMFilter(int val);
 
 // Sélection d’un rotary : charge counter1
 void select_rot() {
