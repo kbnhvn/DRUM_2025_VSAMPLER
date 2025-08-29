@@ -1,13 +1,12 @@
 // Router de vues (défini dans views.h / menu_view.ino)
 #include "views.h"
+#include "synth_api.h"
 extern View currentView;
 void openPatternView();
 void openMenuView();
 void openSongView();
 
 // Prototypes synth/util utilisés ici
-void synthESP32_TRIGGER_P(unsigned char voice, int note);
-void synthESP32_TRIGGER(unsigned char voice);
 void setSound(byte voice);
 void select_rot();
 void do_rot();
@@ -38,7 +37,7 @@ void DO_KEYPAD(){
         switch (modeZ) {
 
           case tPiano: // 16 keys=16 notes
-            synthESP32_TRIGGER_P(selected_sound,nkey+(12*octave));
+            synthESP32_TRIGGER_P( (uint8_t)selected_sound, nkey + (12*octave) );
             if (recording){
               bitWrite(pattern[selected_sound],sstep,1);
               melodic[selected_sound][sstep]=nkey+(12*octave);
@@ -47,7 +46,7 @@ void DO_KEYPAD(){
             break;          
           case tPad: // play pads
 
-            synthESP32_TRIGGER(nkey);
+            synthESP32_TRIGGER( (uint8_t)nkey );
 
 
             if (recording){
@@ -55,7 +54,7 @@ void DO_KEYPAD(){
               melodic[selected_sound][nkey]=ROTvalue[selected_sound][3];
             } else {
 
-              synthESP32_TRIGGER(nkey);
+              synthESP32_TRIGGER( (uint8_t)nkey );
             
             }
             //if (!shiftR1 && !shifting){

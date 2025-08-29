@@ -1,4 +1,4 @@
-
+#include "synth_api.h"
 // // Inicializa el timer y setea el callback
 // void initTimer(void (*callback)()) {
 //   onSync24Callback = callback;
@@ -39,9 +39,6 @@
 
 // void onSync24(); // si défini ici, OK
 
-// Petits prototypes utilisés par le callback et le sequencer
-void synthESP32_TRIGGER(unsigned char voice);
-void synthESP32_TRIGGER_P(unsigned char voice, int note);
 void tic();
 extern bool playing;
 extern byte fx1;

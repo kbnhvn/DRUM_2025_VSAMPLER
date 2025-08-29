@@ -2,10 +2,10 @@
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
 extern Arduino_GFX *gfx;
+#include "synth_api.h"
 
 extern byte    selected_sound;
 extern int32_t ROTvalue[16][8];
-void synthESP32_TRIGGER(unsigned char voice);
 void assignSampleToSlot(int catIndex, int slot);
 
 // struct SampleMeta déjà défini dans sd_catalog.ino

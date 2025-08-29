@@ -11,7 +11,6 @@ const float midiFrequencies[128] = {
     2093.0, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520.0, 3729.31, 3951.07
 };
 
-void audio_task(void*); // tâche audio FreeRTOS
 static void synthESP32_updateVolPan(unsigned char voice);
 void setRandomPitch(byte v);
 
@@ -378,4 +377,147 @@ void setRandomPitch(byte f){
 
 void setRandomNotes(byte f){
   setRandomPitch(f);
-}                 
+}    
+
+#include "synth_api.h"
+#include <Arduino.h>
+
+// ==== externs déjà présents dans ton projet ====
+extern int master_vol;               // défini dans DRUM_2025_VSAMPLER.ino
+extern int master_filter;            // idem
+extern int32_t ROTvalue[16][8];      // [voice]: SAM,INI,END,PIT,RVS,VOL,PAN,FIL
+extern const int16_t* SAMPLES[];     // banques de samples (ROM ou SD)
+extern const uint64_t ENDS[];        // longueurs des samples
+extern uint64_t NEWINIS[];           // bornes start (pour afficher/découper)
+extern uint64_t NEWENDS[];           // bornes end
+extern uint64_t samplePos[16];       // position de lecture par voice
+extern uint64_t stepSize[16];        // incrément de lecture par voice
+extern byte latch[16];               // 0 => (re)-déclencher à la prochaine frame
+extern int mvol;                     // (si utilisé par le mixeur interne)
+extern LowPassFilter FILTROS[18];    // si tes filtres master L/R = index 16/17
+extern const int cutoff;             // bornes pour setCutoff éventuel
+extern const int reso;               // etc.
+
+// ===== helpers internes (safe/robustes) =====
+
+static inline uint64_t clampU64(uint64_t v, uint64_t lo, uint64_t hi){
+  return (v < lo) ? lo : (v > hi) ? hi : v;
+}
+
+// Mappe 0..2047 -> 0..len-1
+static inline uint64_t map12b_to_index(int32_t val12, uint64_t len){
+  if (val12 < 0) val12 = 0;
+  if (val12 > 2047) val12 = 2047;
+  return (uint64_t)(((__uint128_t)val12 * (len ? (len-1) : 0)) / 2047u);
+}
+
+// Calcule un stepSize « pitch » simple (% sample rate), robuste sans table
+// PIT (0..127) -> -24..+24 demi-tons (exemple), factor = 2^(semitones/12)
+static inline uint64_t makeStepSizeFromPit(int32_t pit){
+  int semitones = (int)((pit - 64) * 24 / 64);   // pit=64 => 0, extrêmes ~±24
+  // facteur 2^(n/12) approximé sans double lourd
+  // on utilise un approximant : factor ≈ powf(2.0f, semitones/12.0f)
+  // Pour rester ultra-portable, on fait un ladder simple :
+  float factor = 1.0f;
+  if (semitones > 0) { while (semitones--) factor *= 1.059463094f; }
+  else if (semitones < 0) { while (semitones++) factor /= 1.059463094f; }
+
+  // stepSize=1 => lecture native ; sinon on accélère/ralentit
+  // On encode en 16.16 pour limiter le coût (si ton mixer attend autre chose, adapte)
+  uint64_t stepFixed1616 = (uint64_t)(factor * 65536.0f);
+  if (stepFixed1616 < 1) stepFixed1616 = 1;
+  return stepFixed1616;
+}
+
+// bornage des bornes INI/END et écriture dans NEWINIS/NEWENDS pour le slot
+static void applyStartEndForSlot(int slot, uint64_t len, int32_t ini12, int32_t end12,
+                                 uint64_t& outStart, uint64_t& outEnd){
+  uint64_t s = map12b_to_index(ini12, len);
+  uint64_t e = map12b_to_index(end12, len);
+  if (e <= s) e = (s + 1 <= (len? len-1 : 1)) ? (s + 1) : (len? len-1 : 1);
+  outStart = s; outEnd = e;
+  // garde les bornes côté global (utilisées par l’UI, waveform, etc.)
+  if (slot >= 0) {
+    NEWINIS[slot] = s;
+    NEWENDS[slot] = e;
+  }
+}
+
+// ==== Implémentations API publiques ====
+
+// Volume maître (UI et moteur)
+void synthESP32_setMVol(int v){
+  if (v < 0)   v = 0;
+  if (v > 127) v = 127;
+  master_vol = v;
+  // Si ton mixeur utilise une échelle interne (ex: 0..21 ou 0..127), mets-la à jour ici :
+  // mvol = map(master_vol, 0, 127, 0, 21);  // si utile dans ton moteur
+}
+
+// Filtre maître (UI et moteur)
+void synthESP32_setMFilter(int v){
+  if (v < 0)   v = 0;
+  if (v > 127) v = 127;
+  master_filter = v;
+
+  // Si tu appliques réellement un filtre master L/R dans ton audio_task,
+  // tu peux synchroniser ici un cutoff en fonction de v (ex: 80..12000 Hz).
+  // Exemple (à ajuster selon ta classe LowPassFilter) :
+  // float hz = 80.0f + (12000.0f - 80.0f) * (v / 127.0f);
+  // FILTROS[16].setCutoff(hz);
+  // FILTROS[17].setCutoff(hz);
+}
+
+// Déclenchement pad « normal » (prend SAM/INI/END/PIT du pad)
+void synthESP32_TRIGGER(uint8_t voice){
+  if (voice >= 16) return;
+
+  const int slot = (int)ROTvalue[voice][0];
+  if (slot < 0) return;
+
+  const int32_t ini12 = ROTvalue[voice][1];
+  const int32_t end12 = ROTvalue[voice][2];
+  const int32_t pit   = ROTvalue[voice][3];
+  const int32_t rev   = ROTvalue[voice][4]; // 0/1
+
+  const int16_t* buf = SAMPLES[slot];
+  const uint64_t len = ENDS[slot] + 1;   // ENDS = maxIndex, on veut une longueur
+
+  if (!buf || len < 2) return;
+
+  uint64_t start=0, end=0;
+  applyStartEndForSlot(slot, len, ini12, end12, start, end);
+
+  // programme la voix pour la prochaine trame audio
+  samplePos[voice] = (rev ? end : start) << 16;     // 16.16
+  stepSize[voice]  = makeStepSizeFromPit(pit) * (rev ? (uint64_t)(-1) : (uint64_t)1);
+  latch[voice]     = 0;  // 0 = (re)lancer la voix (selon ta convention)
+}
+
+// Déclenchement avec pitch explicite (mode piano) : on ignore ROTvalue[..][3] et on impose pitch
+void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
+  if (voice >= 16) return;
+
+  const int slot = (int)ROTvalue[voice][0];
+  if (slot < 0) return;
+
+  const int32_t ini12 = ROTvalue[voice][1];
+  const int32_t end12 = ROTvalue[voice][2];
+  const int32_t rev   = ROTvalue[voice][4];
+
+  const int16_t* buf = SAMPLES[slot];
+  const uint64_t len = ENDS[slot] + 1;
+
+  if (!buf || len < 2) return;
+
+  uint64_t start=0, end=0;
+  applyStartEndForSlot(slot, len, ini12, end12, start, end);
+
+  // pitch (0..127) mappé pareil que makeStepSizeFromPit, mais en entrant direct
+  // On réutilise la même logique, mais en forçant "pit" = pitch
+  uint64_t step = makeStepSizeFromPit(pitch);
+
+  samplePos[voice] = (rev ? end : start) << 16; // 16.16
+  stepSize[voice]  = step * (rev ? (uint64_t)(-1) : (uint64_t)1);
+  latch[voice]     = 0;
+}

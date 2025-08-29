@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "synth_api.h"
 
 // Variables externes (déjà dans ton code principal)
 extern int bpm;
@@ -12,8 +13,6 @@ extern int old_counter1;
 extern byte   sync_state;      // défini byte dans .ino principal
 extern uint8_t selected_scale; // défini uint8_t
 extern byte   selected_rot;    // défini byte
-void synthESP32_setMVol(int vol);
-void synthESP32_setMFilter(int val);
 
 // Sélection d’un rotary : charge counter1
 void select_rot() {
@@ -38,11 +37,11 @@ void do_rot() {
   switch (selected_rot) {
     case 8:  bpm = counter1; drawBar(8); break;
     case 9:  master_vol = counter1;
-             synthESP32_setMVol(master_vol);
+             synthESP32_setMVol( (uint8_t)master_vol );
              drawBar(9);
              break;
     case 11: master_filter = counter1;
-             synthESP32_setMFilter(master_filter);
+             synthESP32_setMFilter( (uint8_t)master_filter );
              drawBar(11);
              break;
     case 12: octave = counter1; drawBar(12); break;
