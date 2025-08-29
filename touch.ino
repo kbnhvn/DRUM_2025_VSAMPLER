@@ -20,14 +20,13 @@ extern Arduino_GFX *gfx;
 void handleTouchMenu(int x,int y);
 void handleTouchPattern(int x,int y);
 void handleTouchSong(int x,int y);
+void handleTouchBrowser(int x,int y);
 
 // Routeur de vues
-extern int currentView;
+extern View currentView;
 
 // GT911
 #define GT911_ADDR 0x5D
-extern int TOUCH_RST;
-extern int TOUCH_INT;
 
 // Reset GT911
 void resetGT911() {
@@ -89,24 +88,21 @@ void read_touch(){
       // Dispatch selon la vue
       switch (currentView){
         case VIEW_MAIN:
+          // logique existante déjà exécutée dans le bloc de détection (mapping trigger_on[])
         {
-          // Mappe le point sur les rectangles des 48 zones (pads/boutons/barres)
+          // Mapper la touche sur la grille principale (remplir trigger_on[])
           for (byte f=0; f<48; f++){
-            int x0 = BPOS[f][0], y0 = BPOS[f][1];
-            int w  = BPOS[f][2], h  = BPOS[f][3];
-            if ((cox > x0) && (cox < (x0+w)) && (coy > y0) && (coy < (y0+h))) {
-              // debounce simple : ignore les taps trop rapprochés sur la même zone
-              if (f == last_touched && (start_debounce + debounce_time > (long)millis())){
-                break;
-              }
-              trigger_on[f] = 1;
-              last_touched   = f;
-              start_debounce = millis();
+            int x0=BPOS[f][0], y0=BPOS[f][1], w=BPOS[f][2], h=BPOS[f][3];
+            if ((cox > x0) && (cox < x0+w) && (coy > y0) && (coy < y0+h)) {
+              if (f==last_touched && (start_debounce + debounce_time > (long)millis())) break;
+              trigger_on[f]=1;
+              last_touched=f;
+              start_debounce=millis();
               break;
             }
           }
-        }
-        break;
+          break;
+        } 
 
         case VIEW_MENU:
           handleTouchMenu(cox, coy);
@@ -120,7 +116,10 @@ void read_touch(){
           handleTouchSong(cox, coy);
           break;
 
-        // (si tu ajoutes VIEW_BROWSER/VIEW_PICKER, rajoute ici les handlers)
+        case VIEW_BROWSER:
+          handleTouchBrowser(cox, coy);
+          break;
+
         default:
           break;
       }

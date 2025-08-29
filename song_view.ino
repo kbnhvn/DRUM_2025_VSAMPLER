@@ -51,5 +51,5 @@ void handleTouchSong(int x,int y){
     if (x>=440 && x<=620){ /* clear song */ extern String songSeq[]; extern int songLen; songLen=0; return; }
   }
   // Back
-  if (y>=4 && y<=20 && x>=600 && x<=632){ extern int currentView; currentView = VIEW_MAIN; return; }
+  if (y>=4 && y<=20 && x>=440 && x<=472){ extern View currentView; currentView = VIEW_MAIN; return; }
 }

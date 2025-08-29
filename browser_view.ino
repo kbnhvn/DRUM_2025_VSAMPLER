@@ -1,9 +1,14 @@
 #include <Arduino.h>
 #include <SD.h>
-
-// Vue actuelle
-enum View { VIEW_MAIN, VIEW_MENU, VIEW_PATTERN, VIEW_SONG, VIEW_BROWSER };
+#include "views.h"
 extern View currentView;
+// helpers rendus par LCD_tools.ino
+extern void drawBT(byte bt, int color, String texto);
+extern Arduino_GFX *gfx;
+extern int BPOS[48][4];
+// assign depuis SD
+void assignSampleToSlot(int catIndex, int slot);
+extern byte selected_sound;
 
 // Variables File Browser
 static String fileList[128];   // max 128 fichiers
@@ -98,10 +103,7 @@ void handleTouchBrowser(int x, int y) {
       assignSampleToSlot(selectedIndex, selected_sound);
       Serial.printf("Assigned %s to pad %d\n", fileList[selectedIndex].c_str(), selected_sound);
     }
-  } else if (x >= BPOS[27][0] && y >= BPOS[27][1]) { // Back
-    currentView = VIEW_MAIN;
-    drawScreen1_ONLY1();
-  }
+  } else if (x >= BPOS[27][0] && y >= BPOS[27][1]) { currentView = VIEW_MAIN; return; }
 }
 
 // Entrée dans la vue

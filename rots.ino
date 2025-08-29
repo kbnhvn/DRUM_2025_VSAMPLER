@@ -5,13 +5,13 @@ extern int bpm;
 extern int master_vol;
 extern int master_filter;
 extern int octave;
-extern int sync_state;
-extern int selected_scale;
 extern int ztranspose;
 extern int zmpitch;
-extern int selected_rot;
 extern int counter1;
 extern int old_counter1;
+extern byte   sync_state;      // défini byte dans .ino principal
+extern uint8_t selected_scale; // défini uint8_t
+extern byte   selected_rot;    // défini byte
 
 // Sélection d’un rotary : charge counter1
 void select_rot() {

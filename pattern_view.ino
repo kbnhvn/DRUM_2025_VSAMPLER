@@ -1,12 +1,19 @@
 #include <ArduinoJson.h>
 #include <SD.h>
- 
+#include "views.h"
+
+// Déclaration avant-usage pour le pointeur global gfx
+#include <vector>
+class Arduino_GFX; 
+extern Arduino_GFX *gfx;
+
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
  
 extern uint16_t pattern[16];      // bitmask 16 steps / pad
 extern int32_t  ROTvalue[16][8];  // SAM,INI,END,PIT,RVS,VOL,PAN,FIL
 extern String   sound_names[];    // nom du sample pour affichage
+extern View     currentView;
 
 
 static int nextPatternNum(){
@@ -59,7 +66,7 @@ static void pattern_save_json(){
   serializeJson(doc,f); f.close(); SD.rename(tmp, fin);
 }
 
-static void pattern_new(){ for(int s=0;s<16;s++) for(int st=0;st<16;st++) pattern[s][st]=0; }
+static void pattern_new(){ for(int s=0;s<16;s++) pattern[s]=0; }
 
 static bool pattern_load_first(){
   File dir=SD.open("/patterns"); if (!dir) return false;
@@ -71,12 +78,13 @@ static bool pattern_load_first(){
     JsonObject po=pads[s];
     sound_names[s]=po["name"].as<String>();
     JsonObject pa = po["params"]; jsonReadParams(pa, s);
-    JsonArray steps=po["pattern"];
-    uint16_t m=0;
-    for(int st=0;st<min(16,(int)steps.size());st++){
-      if (steps[st]) m |= (1<<st);
+    JsonArray steps = po["pattern"];
+    uint16_t m = 0;
+    int n = min(16, (int)steps.size());
+    for (int st=0; st<n; ++st) {
+      if (steps[st].as<int>()) m |= (1 << st);
     }
-    pattern[s]=m;
+    pattern[s] = m;
   }
   f.close(); return true;
 }
@@ -97,5 +105,5 @@ void handleTouchPattern(int x,int y){
     if (x>=440 && x<=620){ pattern_load_first(); return; }
   }
   // Back
-  if (y>=4 && y<=20 && x>=600 && x<=632){ extern int currentView; currentView = VIEW_MAIN; return; }
+  if (y>=4 && y<=20 && x>=440 && x<=472){ currentView = VIEW_MAIN; return; }
 }
