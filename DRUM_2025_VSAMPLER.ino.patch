@@ -1,0 +1,123 @@
+--- a/DRUM_2025_VSAMPLER.ino
++++ b/DRUM_2025_VSAMPLER.ino
+@@ -8,6 +8,22 @@
+ 
+ // includes
+ #include <Arduino.h>
++
++// --- Runtime samples from SD ---
++#ifndef USE_SD_SAMPLES
++#define USE_SD_SAMPLES 1
++#endif
++
++// Forward decls for new views/server/backlight
++void openMenuView();
++void openPatternView();
++void openSongView();
++void openBrowserView();
++void loopWeb();
++void backlight_init();
++void setBacklightPercent(int p);
++int  getBacklightPercent();
++
+@@
+-#include "SOUNDS/zSAMPLE00.h"
+-#include "SOUNDS/zSAMPLE01.h"
+-#include "SOUNDS/zSAMPLE02.h"
+-#include "SOUNDS/zSAMPLE03.h"
+-#include "SOUNDS/zSAMPLE04.h"
+-#include "SOUNDS/zSAMPLE05.h"
+-#include "SOUNDS/zSAMPLE06.h"
+-#include "SOUNDS/zSAMPLE07.h"
+-#include "SOUNDS/zSAMPLE08.h"
+-#include "SOUNDS/zSAMPLE09.h"
+-#include "SOUNDS/zSAMPLE10.h"
+-#include "SOUNDS/zSAMPLE11.h"
+-#include "SOUNDS/zSAMPLE12.h"
+-#include "SOUNDS/zSAMPLE13.h"
+-#include "SOUNDS/zSAMPLE14.h"
+-#include "SOUNDS/zSAMPLE15.h"
+-#include "SOUNDS/zSAMPLE16.h"
+-#include "SOUNDS/zSAMPLE17.h"
+-#include "SOUNDS/zSAMPLE18.h"
+-#include "SOUNDS/zSAMPLE19.h"
+-#include "SOUNDS/zSAMPLE20.h"
+-#include "SOUNDS/zSAMPLE21.h"
+-#include "SOUNDS/zSAMPLE22.h"
+-#include "SOUNDS/zSAMPLE23.h"
+-#include "SOUNDS/zSAMPLE24.h"
+-#include "SOUNDS/zSAMPLE25.h"
+-#include "SOUNDS/zSAMPLE26.h"
+-#include "SOUNDS/zSAMPLE27.h"
+-#include "SOUNDS/zSAMPLE28.h"
+-#include "SOUNDS/zSAMPLE29.h"
+-#include "SOUNDS/zSAMPLE30.h"
+-#include "SOUNDS/zSAMPLE31.h"
+-#include "SOUNDS/zSAMPLE32.h"
+-#include "SOUNDS/zSAMPLE33.h"
+-#include "SOUNDS/zSAMPLE34.h"
+-#include "SOUNDS/zSAMPLE35.h"
+-#include "SOUNDS/zSAMPLE36.h"
+-#include "SOUNDS/zSAMPLE37.h"
+-#include "SOUNDS/zSAMPLE38.h"
+-#include "SOUNDS/zSAMPLE39.h"
+-#include "SOUNDS/zSAMPLE40.h"
+-#include "SOUNDS/zSAMPLE41.h"
+-#include "SOUNDS/zSAMPLE42.h"
+-#include "SOUNDS/zSAMPLE43.h"
+-#include "SOUNDS/zSAMPLE44.h"
+-#include "SOUNDS/zSAMPLE45.h"
+-#include "SOUNDS/zSAMPLE46.h"
+-#include "SOUNDS/zSAMPLE47.h"
+-#include "SOUNDS/zSAMPLE48.h"
+-#include "SOUNDS/zSAMPLE49.h"
++#if !(USE_SD_SAMPLES)
++#include "SOUNDS/zSAMPLE00.h"
++#include "SOUNDS/zSAMPLE01.h"
++#include "SOUNDS/zSAMPLE02.h"
++/* ... (tous les include zSAMPLE** conservés ici) ... */
++#include "SOUNDS/zSAMPLE49.h"
+@@
+-const String sound_names[50] = { 
++const String trot[16] = { "SAM","INI","END","PIT","RVS","VOL","PAN","FIL","BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"};
++const String tbuttons1[8] = {"   PAD   ", "  RND P ", "  LO...", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
++const String tbuttons2[8] = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", "  + 1   ", "  PTRN  ", "  MENU  ", "  SHIFT "};
++
++#if !(USE_SD_SAMPLES)
++const String sound_names[50] = { 
+@@
+-const int16_t* SAMPLES[50] = {
++const int16_t* SAMPLES[50] = {
+     SAMPLE00, /* ... */ SAMPLE49
+ };
++#endif // static embedded samples
++
++#if (USE_SD_SAMPLES)
++  #define BANK_SIZE 256
++  extern int16_t* SAMPLES[BANK_SIZE];
++  extern uint64_t ENDS[BANK_SIZE];
++  extern String   sound_names[BANK_SIZE];
++  extern void initSD();
++  extern void buildCatalog();
++  extern void assignSampleToSlot(int catIndex, int slot);
++#endif
+@@
+-uint64_t NEWENDS[50];
+-uint64_t NEWINIS[50];
++uint64_t NEWENDS[256];
++uint64_t NEWINIS[256];
+@@
+-  #ifdef GFX_BL
+-    pinMode(GFX_BL, OUTPUT);
+-    digitalWrite(GFX_BL, HIGH);
+-  #endif
++  backlight_init();
+@@
+-  Serial.println("Tarjeta SD inicializada correctamente");
+-  // Listar archivos .wav desde el directorio raíz
+-  //listWavFiles("/");
++  Serial.println("Tarjeta SD inicializada correctamente");
++  buildCatalog();
+@@
+ void loop() {
++  loopWeb();
