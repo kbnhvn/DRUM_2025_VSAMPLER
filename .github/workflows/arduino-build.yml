@@ -29,8 +29,14 @@ jobs:
       - name: Install Libraries
         run: |
           arduino-cli lib install "GFX Library for Arduino"
+          arduino-cli lib install "Dev Device Pins"
+          arduino-cli lib install "ESP32-audioI2S-master"
           arduino-cli lib install "uClock"
-          arduino-cli lib install "Adafruit ADS1X15"
+          arduino-cli lib install "ESPAsyncWebServer"
+          arduino-cli lib install "AsyncTCP"
+          arduino-cli lib install "Audio"
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "uClock"
           arduino-cli lib install "U8g2"
 
       - name: Compile the Sketch
