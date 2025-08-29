@@ -13,7 +13,7 @@ static inline uint16_t bl_maxduty() { return (1u << BL_RES) - 1u; }
 void backlight_init(){
   pinMode(GFX_BL, OUTPUT);
   analogWriteFrequency(GFX_BL, BL_HZ);
-  analogWriteResolution(BL_RES);
+  analogWriteResolution(GFX_BL, BL_RES);
   analogWrite(GFX_BL, bl_maxduty()); // 100%
 }
 
