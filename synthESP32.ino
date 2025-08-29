@@ -162,7 +162,7 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-static void audio_task(void *userData){
+void audio_task(void *userData){
   while(1) {
       write_buffer();      
   }

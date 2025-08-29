@@ -90,4 +90,3 @@ void handleTouchMenu(int x,int y){
   // Back (coin haut-droit)
   if (y>=4 && y<=20 && x>=440 && x<=472){ currentView = VIEW_MAIN; return; }
   }
-}

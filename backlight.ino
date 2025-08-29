@@ -1,20 +1,16 @@
+// Backlight control (PWM)
 #include <Arduino.h>
-// Utiliser les objets globaux déclarés dans le .ino principal
-extern Arduino_GFX *gfx;
+extern Arduino_GFX *gfx;   // défini dans le .ino principal
 
+// GFX_BL est défini dans le .ino principal (pin du backlight)
 #ifndef GFX_BL
 #define GFX_BL 1
 #endif
 
-#ifndef BL_CH
-#define BL_CH  3
-#endif
-#ifndef BL_RES
-#define BL_RES 8
-#endif
-#ifndef BL_HZ
-#define BL_HZ  20000
-#endif
+// Canal/Hz/Resolution pour LEDC (une seule source de vérité)
+static const int BL_CH  = 0;
+static const int BL_HZ  = 20000;
+static const int BL_RES = 8;
 
 static const int BL_CH = 0, BL_HZ = 1000, BL_RES = 8;
 static int g_brightness_percent = 100;
