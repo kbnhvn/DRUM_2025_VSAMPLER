@@ -1,6 +1,4 @@
 #include "Arduino.h"
-#include "LCD_tools.h"
-#include "synthESP32.h"
 
 // Variables externes (déjà dans ton code principal)
 extern int bpm;
