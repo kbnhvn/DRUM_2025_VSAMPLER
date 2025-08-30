@@ -145,6 +145,12 @@ void handleTouchPicker(int x, int y) {
     
     Serial.println("[PICKER] BACK to main");
     currentView = VIEW_MAIN;
+    // Forcer le redraw de l'interface principale
+    drawScreen1_ONLY1();  // Redessiner les pads/boutons
+    draw8aBar();         // Redessiner les barres
+    draw8bBar();
+    refreshPATTERN = true;    // Forcer refresh des patterns
+    refreshMODES = true;      // Forcer refresh des modes
     return;
   }
   

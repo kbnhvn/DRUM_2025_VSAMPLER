@@ -117,7 +117,13 @@ void handleTouchMenu(int x,int y){
     gfx->setTextColor(BLACK, WHITE);
     gfx->print("BACK");
     delay(200);
-    currentView = VIEW_MAIN; 
+    currentView = VIEW_MAIN;
+    // Forcer le redraw de l'interface principale
+    drawScreen1_ONLY1();  // Redessiner les pads/boutons
+    draw8aBar();         // Redessiner les barres
+    draw8bBar();
+    refreshPATTERN = true;    // Forcer refresh des patterns
+    refreshMODES = true;      // Forcer refresh des modes
     return; 
   }
   

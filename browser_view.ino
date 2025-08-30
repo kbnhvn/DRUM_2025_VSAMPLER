@@ -103,7 +103,15 @@ void handleTouchBrowser(int x, int y) {
       assignSampleToSlot(selectedIndex, selected_sound);
       Serial.printf("Assigned %s to pad %d\n", fileList[selectedIndex].c_str(), selected_sound);
     }
-  } else if (x >= BPOS[27][0] && y >= BPOS[27][1]) { currentView = VIEW_MAIN; return; }
+  } else if (x >= BPOS[27][0] && y >= BPOS[27][1]) { 
+      currentView = VIEW_MAIN;
+      // Forcer le redraw de l'interface principale
+      drawScreen1_ONLY1();  // Redessiner les pads/boutons
+      draw8aBar();         // Redessiner les barres
+      draw8bBar();
+      refreshPATTERN = true;    // Forcer refresh des patterns
+      refreshMODES = true;      // Forcer refresh des modes
+      return; }
 }
 
 // Entrée dans la vue
