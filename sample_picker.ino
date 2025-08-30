@@ -13,7 +13,7 @@ extern void    setSound(byte voice);
 extern void assignSampleToSlot(int catIndex, int slot);
 
 // struct SampleMeta déjà défini dans sd_catalog.ino
-#include "sd_catalog.h
+#include "sd_catalog.h"
 // Si au lieu de ça tu exposes un tableau C-style, utilise ceci :
 // extern SampleMeta catalog[];
 // extern int catalogCount;
