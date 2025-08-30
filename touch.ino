@@ -21,6 +21,7 @@ void handleTouchMenu(int x,int y);
 void handleTouchPattern(int x,int y);
 void handleTouchSong(int x,int y);
 void handleTouchBrowser(int x,int y);
+void handleTouchPicker(int x,int y);
 
 // Routeur de vues
 extern View currentView;
@@ -118,6 +119,10 @@ void read_touch(){
 
         case VIEW_BROWSER:
           handleTouchBrowser(cox, coy);
+          break;
+
+        case VIEW_PICKER:
+          handleTouchPicker(cox, coy);
           break;
 
         default:

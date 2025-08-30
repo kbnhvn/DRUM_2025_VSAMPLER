@@ -9,6 +9,7 @@
 // includes
 #include <Arduino.h>
 #include "synth_api.h"
+#include "esp_task_wdt.h"
 
 // --- Prototypes nécessaires (déclarés ailleurs) ---
 void resetGT911();
@@ -62,7 +63,6 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 
 ////////////////////////////// SPIFFS
 #include <FS.h>
-#include <SPIFFS.h>
 
 ////////////////////////////// SYNTH
 //#define SAMPLE_RATE 44100
@@ -218,7 +218,7 @@ int cox, coy, coz;
 #define tRndS2 23
 
 const String trot[16] = { "SAM","INI","END","PIT","RVS","VOL","PAN","FIL","BPM","MVO","TRP","MFI","OCT","MPI","SYN","SCA"};
-const String tbuttons1[8] = {"   PAD   ", "  RND P ", "  LO...", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
+const String tbuttons1[8] = {"   PAD   ", "  RND P ", "  LOAD PS ", " SAVE PS ", "  MUTE  ", "  PIANO ", "  PLAY  ", "  SONG  "};
 const String tbuttons2[8] = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", "  + 1   ", "  PTRN  ", "  MENU  ", "  SHIFT "};
 
 #if (USE_SD_SAMPLES)
@@ -511,8 +511,11 @@ void setup() {
 
   // Serial
   Serial.begin(115200);
-  delay(500);
-  randomSeed(analogRead(0));
+  delay(200);
+  // Watchdog des tâches : inutile ici et source de boot-loop si une tâche ne yield pas
+  esp_task_wdt_deinit();
+  // Seed via RNG matériel (évite analogRead(0) non ADC sur S3)
+  randomSeed(esp_random());
   // // FX
   // if (!psramFound()) {
   //   Serial.println("¡PSRAM no detectada!");
@@ -574,12 +577,6 @@ void setup() {
   synthESP32_setMVol(master_vol);
   // Set master filter
   synthESP32_setMFilter(master_filter);  
-
-  // SPIFFS
-  if (!SPIFFS.begin(true)) {
-    Serial.println("Error al montar el sistema de archivos SPIFFS");
-    return;
-  } 
   
   ///////////////////////////////////////////////////////
   // Inicializar otro bus SPI para la tarjeta SD

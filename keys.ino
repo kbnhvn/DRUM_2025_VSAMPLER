@@ -388,7 +388,11 @@ void DO_KEYPAD(){
             do_rot();
             break;
           case 29:
-            openPatternView();
+            if (shifting || shiftR1) {
+              openSamplePicker();
+            } else {
+              openPatternView();
+            }
             break;
           case 30:
             openMenuView();

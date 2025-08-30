@@ -6,8 +6,8 @@ extern Arduino_GFX *gfx;   // défini dans le .ino principal
 #define GFX_BL 1
 #endif
 
-static const uint8_t BL_RES = 8;
-static const uint32_t BL_HZ = 20000;
+static const uint8_t BL_RES = 10;
+static const uint32_t BL_HZ = 5000;
 static inline uint16_t bl_maxduty() { return (1u << BL_RES) - 1u; }
 
 void backlight_init(){
