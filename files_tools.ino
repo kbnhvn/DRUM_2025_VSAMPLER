@@ -1,6 +1,7 @@
 // files_tools.ino — SD only, JSON patterns & sound-sets
 #include <Arduino.h>
 #include <ArduinoJson.h>
+using namespace ArduinoJson; 
 #include <FS.h>
 #include <SD.h>
 

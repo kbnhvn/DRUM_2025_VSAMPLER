@@ -67,7 +67,7 @@ void buildCatalog(){
 }
 
 // Charge un sample dans un slot donné
-void assignSampleToSlot(int catIndex, int slot){
+bool assignSampleToSlot(int catIndex, int slot){
   if (slot<0 || slot>=BANK_SIZE) return;
   if (catIndex<0 || catIndex>=(int)CATALOG.size()) return;
   if (!SAMPLES[slot]){
