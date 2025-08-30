@@ -7,7 +7,6 @@
 class Arduino_GFX; 
 extern Arduino_GFX *gfx;
 
-extern int DARKGREY, BLACK, WHITE, etc.;
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
  
