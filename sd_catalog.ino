@@ -68,11 +68,11 @@ void buildCatalog(){
 
 // Charge un sample dans un slot donné
 bool assignSampleToSlot(int catIndex, int slot){
-  if (slot<0 || slot>=BANK_SIZE) return;
-  if (catIndex<0 || catIndex>=(int)CATALOG.size()) return;
+  if (slot<0 || slot>=BANK_SIZE) return false;
+  if (catIndex<0 || catIndex>=(int)CATALOG.size()) return false;
   if (!SAMPLES[slot]){
     int16_t* b=nullptr; uint32_t l=0;
-    if (!readWav16Mono(CATALOG[catIndex].path.c_str(), &b, &l)) return;
+    if (!readWav16Mono(CATALOG[catIndex].path.c_str(), &b, &l)) return false;
     SAMPLES[slot]=b; ENDS[slot]=(l>0)?(l-1):0;
   }
   sound_names[slot]=CATALOG[catIndex].name;

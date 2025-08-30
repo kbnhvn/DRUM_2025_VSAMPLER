@@ -1,9 +1,9 @@
 // files_tools.ino — SD only, JSON patterns & sound-sets
 #include <Arduino.h>
 #include <ArduinoJson.h>
-using namespace ArduinoJson; 
 #include <FS.h>
 #include <SD.h>
+using namespace ArduinoJson; 
 
 // ==== Externs (doivent correspondre EXACTEMENT aux signatures/globals du projet) ====
 extern uint16_t pattern[16];          // 16 bitmasks, 1 par pad
