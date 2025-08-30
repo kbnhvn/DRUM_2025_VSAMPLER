@@ -2,18 +2,13 @@
 #include <SD.h>
 #include "views.h"
 
-// Déclaration avant-usage pour le pointeur global gfx
-#include <vector>
-class Arduino_GFX; 
 extern Arduino_GFX *gfx;
-
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed = false);
 extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
- 
-extern uint16_t pattern[16];      // bitmask 16 steps / pad
-extern int32_t  ROTvalue[16][8];  // SAM,INI,END,PIT,RVS,VOL,PAN,FIL
-extern String   sound_names[];    // nom du sample pour affichage
+extern uint16_t pattern[16];
+extern int32_t  ROTvalue[16][8];
+extern String   sound_names[];
 extern View     currentView;
 
 
@@ -95,11 +90,10 @@ static bool pattern_load_first(){
 void openPatternView(){
   gfx->fillScreen(BLACK);
   drawTopBar("PATTERN", true);
-  drawButtonBox(40,70,180,80, DARKGREY, "Save");
-  drawButtonBox(240,70,180,80, DARKGREY, "New");
-  drawButtonBox(440,70,180,80, DARKGREY, "Load");
+  drawButtonBox(40,70,180,80, DARKGREY, "Save", false);  // Ajouter false explicitement
+  drawButtonBox(240,70,180,80, DARKGREY, "New", false);
+  drawButtonBox(440,70,180,80, DARKGREY, "Load", false);
   
-  // Zone back debug
   gfx->drawRect(400, 0, 80, 30, RED);
   gfx->setCursor(405, 15);
   gfx->setTextColor(RED, BLACK);
@@ -115,12 +109,11 @@ void handleTouchPattern(int x,int y){
       Serial.println("[PATTERN] Saving pattern...");
       pattern_save_json(); 
       
-      // Afficher confirmation
       gfx->setCursor(40, 180);
       gfx->setTextColor(GREEN, BLACK);
       gfx->print("Pattern saved!");
       delay(1000);
-      openPatternView(); // Refresh
+      openPatternView();
       return; 
     }
     if (x>=240 && x<=420){ 
@@ -149,7 +142,6 @@ void handleTouchPattern(int x,int y){
     }
   }
   
-  // Back
   if (y>=0 && y<=30 && x>=400 && x<=480){ 
     Serial.println("[PATTERN] BACK to main");
     gfx->fillRect(400, 0, 80, 30, WHITE);

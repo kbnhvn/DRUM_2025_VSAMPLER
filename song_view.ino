@@ -1,14 +1,16 @@
 #include <ArduinoJson.h>
 #include <SD.h>
 #include "views.h"
-extern View currentView;
-extern Arduino_GFX *gfx;
 
+extern Arduino_GFX *gfx;
+extern View currentView;
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed = false);
 extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
 
-static String songSeq[64]; static int songLen=0; static bool songLoop=true;
+static String songSeq[64]; 
+static int songLen=0; 
+static bool songLoop=true;
 
 static int nextSongNum(){
   if (!SD.exists("/songs")) SD.mkdir("/songs");
@@ -44,18 +46,16 @@ static bool song_load_first(){
 void openSongView(){
   gfx->fillScreen(BLACK);
   drawTopBar("SONG", true);
-  drawButtonBox(40,70,180,80, DARKGREY, "Save");
-  drawButtonBox(240,70,180,80, DARKGREY, "Load");
-  drawButtonBox(440,70,180,80, DARKGREY, "Clear");
+  drawButtonBox(40,70,180,80, DARKGREY, "Save", false);
+  drawButtonBox(240,70,180,80, DARKGREY, "Load", false);
+  drawButtonBox(440,70,180,80, DARKGREY, "Clear", false);
   
-  // Info song
   gfx->setCursor(40, 180);
   gfx->setTextColor(WHITE, BLACK);
   gfx->print("Song length: ");
   gfx->print(songLen);
   gfx->print(" patterns");
   
-  // Zone back debug
   gfx->drawRect(400, 0, 80, 30, RED);
   gfx->setCursor(405, 15);
   gfx->setTextColor(RED, BLACK);
@@ -68,7 +68,6 @@ void handleTouchSong(int x,int y){
   if (y>=70 && y<=150){
     if (x>=40 && x<=220){ 
       flashButton(40,70,180,80, DARKGREY, "Save");
-      Serial.println("[SONG] Saving song...");
       song_save_json(); 
       
       gfx->setCursor(40, 200);
@@ -80,7 +79,6 @@ void handleTouchSong(int x,int y){
     }
     if (x>=240 && x<=420){ 
       flashButton(240,70,180,80, DARKGREY, "Load");
-      Serial.println("[SONG] Loading song...");
       bool loaded = song_load_first(); 
       
       gfx->setCursor(240, 200);
@@ -92,7 +90,6 @@ void handleTouchSong(int x,int y){
     }
     if (x>=440 && x<=480){ 
       flashButton(440,70,180,80, DARKGREY, "Clear");
-      Serial.println("[SONG] Clearing song...");
       songLen=0; 
       
       gfx->setCursor(440, 200);
@@ -104,7 +101,6 @@ void handleTouchSong(int x,int y){
     }
   }
   
-  // Back
   if (y>=0 && y<=30 && x>=400 && x<=480){ 
     Serial.println("[SONG] BACK to main");
     gfx->fillRect(400, 0, 80, 30, WHITE);
@@ -112,6 +108,4 @@ void handleTouchSong(int x,int y){
     currentView = VIEW_MAIN; 
     return; 
   }
-  
-  Serial.printf("[SONG] Touch ignored at x=%d, y=%d\n", x, y);
 }

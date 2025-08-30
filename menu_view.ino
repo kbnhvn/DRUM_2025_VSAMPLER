@@ -3,7 +3,7 @@
 #include "views.h"
 
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed = false);
 extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
 extern void setBacklightPercent(int p);
 extern int  getBacklightPercent();

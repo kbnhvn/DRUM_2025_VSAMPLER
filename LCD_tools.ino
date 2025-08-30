@@ -68,12 +68,6 @@ void showLastTouched() {
 
 }
 
-void flashButton(int x, int y, int w, int h, int color, const char* texto) {
-  drawButtonBox(x, y, w, h, WHITE, texto, true);
-  delay(150);
-  drawButtonBox(x, y, w, h, color, texto, false);
-}
-
 void clearLastTouched() {
   if (!show_last_touched) {
     return;
@@ -800,7 +794,6 @@ void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool p
     gfx->drawRect(x + 5, y + 5, w - 11, h - 11, BLACK);
   }
   
-  // Remplir le centre si pressé
   if (pressed) {
     gfx->fillRect(x + 6, y + 6, w - 13, h - 13, color);
   }
@@ -808,4 +801,11 @@ void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool p
   gfx->setTextColor(drawColor, bgColor);
   gfx->setCursor(x + 8, y + (h/2) + 3);
   gfx->print(texto);
+}
+
+// AJOUTER après drawButtonBox :
+void flashButton(int x, int y, int w, int h, int color, const char* texto) {
+  drawButtonBox(x, y, w, h, color, texto, true);
+  delay(150);
+  drawButtonBox(x, y, w, h, color, texto, false);
 }
