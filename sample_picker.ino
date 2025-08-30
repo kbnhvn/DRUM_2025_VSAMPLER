@@ -10,7 +10,6 @@ extern byte    selected_sound;
 extern int32_t ROTvalue[16][8];
 extern void    synthESP32_TRIGGER(unsigned char voice);
 extern void    setSound(byte voice);
-extern void assignSampleToSlot(int catIndex, int slot);
 
 // struct SampleMeta déjà défini dans sd_catalog.ino
 #include "sd_catalog.h"

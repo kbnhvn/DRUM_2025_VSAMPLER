@@ -1,9 +1,7 @@
 #include <FS.h>
 #include <SD.h>
 #include <vector>
-
-struct SampleMeta { String path; String name; uint32_t len=0; int16_t* buf=nullptr; };
-std::vector<SampleMeta> CATALOG;
+#include "sd_catalog.h"
 
 #define BANK_SIZE 256
 int16_t* SAMPLES[BANK_SIZE];
