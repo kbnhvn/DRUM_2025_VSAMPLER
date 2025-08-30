@@ -3,7 +3,6 @@
 #include <ArduinoJson.h>
 #include <FS.h>
 #include <SD.h>
-using namespace ArduinoJson; 
 
 // ==== Externs (doivent correspondre EXACTEMENT aux signatures/globals du projet) ====
 extern uint16_t pattern[16];          // 16 bitmasks, 1 par pad
@@ -19,34 +18,47 @@ extern byte     lastStep;
 extern byte     newLastStep;
 
 extern void     setSound(byte voice);  // re-applique params vers moteur
-extern void     select_rot();          // rafraichit l’UI barres si besoin
-
-// Optionnel : pour UI (si tu affiches les noms)
-// Si inexistant, laisse commenté — ce n'est pas nécessaire pour le fonctionnement.
-// extern String   sound_names[];
+extern void     select_rot();          // rafraichit l'UI barres si besoin
 
 // ==== Utils ====
 static void ensureDir(const char* path) {
   if (!SD.exists(path)) SD.mkdir(path);
 }
 
-static bool writeJsonAtomic(const String& finalPath, DynamicJsonDocument& doc) {
+// COMME VOS AUTRES FICHIERS : namespace explicite
+static bool writeJsonAtomic(const String& finalPath, ArduinoJson::DynamicJsonDocument& doc) {
   String tmpPath = finalPath + ".tmp";
   File f = SD.open(tmpPath, FILE_WRITE);
   if (!f) return false;
-  bool ok = (serializeJson(doc, f) > 0);
+  
+  size_t bytesWritten = serializeJson(doc, f);
+  bool writeOk = (bytesWritten > 0) && !f.getWriteError();
   f.close();
-  if (!ok) { SD.remove(tmpPath); return false; }
+  
+  if (!writeOk) { 
+    SD.remove(tmpPath); 
+    return false; 
+  }
+  
   SD.remove(finalPath);          // idempotent
   return SD.rename(tmpPath, finalPath);
 }
 
-static bool readJson(const String& path, DynamicJsonDocument& doc) {
+static bool readJson(const String& path, ArduinoJson::DynamicJsonDocument& doc) {
   File f = SD.open(path, FILE_READ);
-  if (!f) return false;
+  if (!f) {
+    Serial.println("[JSON] Cannot open: " + path);
+    return false;
+  }
+  
   DeserializationError err = deserializeJson(doc, f);
   f.close();
-  return !err;
+  
+  if (err) {
+    Serial.println("[JSON] Parse error: " + String(err.c_str()));
+    return false;
+  }
+  return true;
 }
 
 static String twoDigits(byte n) {
@@ -55,27 +67,17 @@ static String twoDigits(byte n) {
 }
 
 // ==== PATTERN ====
-// Chemin: /patterns/pattern_XX.json
-// Contenu:
-// {
-//   "version": 1,
-//   "firstStep": <int>,
-//   "lastStep":  <int>,
-//   "isMelodic": <int>,
-//   "steps": [ uint16_t x16 ]
-// }
-
 void save_pattern(byte idx) {
   ensureDir("/patterns");
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
 
-  DynamicJsonDocument doc(4096);
+  ArduinoJson::DynamicJsonDocument doc(4096);
   doc["version"]   = 1;
   doc["firstStep"] = (int)firstStep;
   doc["lastStep"]  = (int)lastStep;
   doc["isMelodic"] = (int)isMelodic;
 
-  JsonArray steps = doc.createNestedArray("steps");
+  ArduinoJson::JsonArray steps = doc.createNestedArray("steps");
   for (int s = 0; s < 16; s++) steps.add((uint16_t)pattern[s]);
 
   bool ok = writeJsonAtomic(path, doc);
@@ -84,7 +86,7 @@ void save_pattern(byte idx) {
 
 void load_pattern(byte idx) {
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
-  DynamicJsonDocument doc(4096);
+  ArduinoJson::DynamicJsonDocument doc(4096);
   if (!readJson(path, doc)) {
     Serial.println("[PATTERN] Load FAILED -> " + path);
     return;
@@ -94,45 +96,34 @@ void load_pattern(byte idx) {
   if (doc.containsKey("lastStep"))  lastStep  = (byte)((int)doc["lastStep"]);
   if (doc.containsKey("isMelodic")) isMelodic = (uint16_t)((int)doc["isMelodic"]);
 
-  JsonArray steps = doc["steps"];
+  ArduinoJson::JsonArray steps = doc["steps"];
   if (!steps.isNull() && steps.size() >= 16) {
     for (int s = 0; s < 16; s++) {
       pattern[s] = (uint16_t)steps[s].as<uint16_t>();
     }
   }
 
-  // Le séquenceur appliquera ces valeurs, l’UI se rafraichira via flags existants.
   Serial.println("[PATTERN] Loaded <- " + path);
 }
 
 // ==== SOUND-SET ====
-// Chemin: /sounds/sound_XX.json
-// Contenu:
-// {
-//   "version": 1,
-//   "globals": { "bpm":..., "master_vol":..., "master_filter":..., "octave":... },
-//   "voices": [
-//      { "params":[SAM,INI,END,PIT,RVS,VOL,PAN,FIL] } x16
-//   ]
-// }
-
 void save_sound(byte idx) {
   ensureDir("/sounds");
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
 
-  DynamicJsonDocument doc(8192);
+  ArduinoJson::DynamicJsonDocument doc(8192);
   doc["version"] = 1;
 
-  JsonObject gl = doc.createNestedObject("globals");
+  ArduinoJson::JsonObject gl = doc.createNestedObject("globals");
   gl["bpm"]          = bpm;
   gl["master_vol"]   = master_vol;
   gl["master_filter"]= master_filter;
   gl["octave"]       = octave;
 
-  JsonArray voices = doc.createNestedArray("voices");
+  ArduinoJson::JsonArray voices = doc.createNestedArray("voices");
   for (int v = 0; v < 16; v++) {
-    JsonObject vo = voices.createNestedObject();
-    JsonArray pa  = vo.createNestedArray("params");
+    ArduinoJson::JsonObject vo = voices.createNestedObject();
+    ArduinoJson::JsonArray pa  = vo.createNestedArray("params");
     for (int p = 0; p < 8; p++) pa.add((int)ROTvalue[v][p]);
   }
 
@@ -142,13 +133,13 @@ void save_sound(byte idx) {
 
 void load_sound(byte idx) {
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
-  DynamicJsonDocument doc(8192);
+  ArduinoJson::DynamicJsonDocument doc(8192);
   if (!readJson(path, doc)) {
     Serial.println("[SOUND] Load FAILED -> " + path);
     return;
   }
 
-  JsonObject gl = doc["globals"];
+  ArduinoJson::JsonObject gl = doc["globals"];
   if (!gl.isNull()) {
     if (gl.containsKey("bpm"))           bpm = (int)gl["bpm"];
     if (gl.containsKey("master_vol"))    master_vol = (int)gl["master_vol"];
@@ -156,11 +147,11 @@ void load_sound(byte idx) {
     if (gl.containsKey("octave"))        octave = (int)gl["octave"];
   }
 
-  JsonArray voices = doc["voices"];
+  ArduinoJson::JsonArray voices = doc["voices"];
   if (!voices.isNull() && voices.size() >= 16) {
     for (int v = 0; v < 16; v++) {
-      JsonObject vo = voices[v];
-      JsonArray pa = vo["params"];
+      ArduinoJson::JsonObject vo = voices[v];
+      ArduinoJson::JsonArray pa = vo["params"];
       if (!pa.isNull() && pa.size() >= 8) {
         for (int p = 0; p < 8; p++) {
           ROTvalue[v][p] = (int32_t)pa[p].as<int>();
@@ -169,9 +160,9 @@ void load_sound(byte idx) {
     }
   }
 
-  // Réapplique les params à l’audio (assignation, gains, filtres…)
+  // Réapplique les params à l'audio
   for (byte v = 0; v < 16; v++) setSound(v);
-  select_rot(); // si tu veux rafraîchir la sélection de barres
+  select_rot();
 
   Serial.println("[SOUND] Loaded <- " + path);
 }
