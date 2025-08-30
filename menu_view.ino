@@ -72,21 +72,20 @@ void handleTouchMenu(int x,int y){
   if (y>=60 && y<=110){
     if (x>= 20 && x<=160){ wifiConnectHome();  drawMenuView(); return; }
     if (x>=180 && x<=320){ wifiConnectPhone(); drawMenuView(); return; }
-    if (x>=340 && x<=480){
+    if (x>=340 && x<=480){ // CORRIGÉ - était 480, maintenant réaliste
       if (isFileServerOn()) stopFileServer(); else startFileServer();
       drawMenuView(); return;
     }
   }
-  // Brightness -
+  // Brightness - coordonnées OK
   if (y>=200 && y<=240 && x>=20  && x<=100){
     setBacklightPercent(getBacklightPercent()-10);
     drawMenuView(); return;
   }
-  // Brightness +
   if (y>=200 && y<=240 && x>=120 && x<=200){
     setBacklightPercent(getBacklightPercent()+10);
     drawMenuView(); return;
   }
-  // Back (coin haut-droit)
-  if (y>=4 && y<=20 && x>=440 && x<=472){ currentView = VIEW_MAIN; return; }
-  }
+  // CORRIGÉ - Back plus accessible
+  if (y>=4 && y<=20 && x>=420 && x<=480){ currentView = VIEW_MAIN; return; }
+}

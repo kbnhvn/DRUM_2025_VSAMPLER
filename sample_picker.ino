@@ -9,6 +9,10 @@ extern Arduino_GFX *gfx;
 
 extern View currentView;
 
+#ifndef BANK_SIZE
+#define BANK_SIZE 256
+#endif
+
 extern byte    selected_sound;
 extern int32_t ROTvalue[16][8];
 extern void    synthESP32_TRIGGER(unsigned char voice);
@@ -110,6 +114,7 @@ void handleTouchPicker(int x, int y) {
       return;
     }
   }
+  
   // boutons bas : ASSIGN / BACK
   int by = listTopY + rowsVis*rowH + 10;
   // ASSIGN (x:20..140, y:by..by+34)
@@ -120,19 +125,20 @@ void handleTouchPicker(int x, int y) {
     redrawPickerList();
     return;
   }
-  // BACK (x:160..280)
-  if (x >= 160 && x <= 280 && y >= by && y <= by+34) {
+  // BACK - CORRIGÉ coordonnées
+  if (x >= 160 && x <= 240 && y >= by && y <= by+34) {
     currentView = VIEW_MAIN;
     return;
   }
+  
   // scroll simple : zone droite (barre imaginaire)
   // haut: scrollIx--
-  if (x >= 440 && x <= 470 && y >= listTopY && y <= listTopY+40) {
+  if (x >= 440 && x <= 480 && y >= listTopY && y <= listTopY+40) { // CORRIGÉ
     if (scrollIx > 0) { scrollIx--; redrawPickerList(); }
     return;
   }
   // bas: scrollIx++
-  if (x >= 440 && x <= 470 && y >= listTopY+rowsVis*rowH-40 && y <= listTopY+rowsVis*rowH) {
+  if (x >= 440 && x <= 480 && y >= listTopY+rowsVis*rowH-40 && y <= listTopY+rowsVis*rowH) { // CORRIGÉ
     if (scrollIx + rowsVis < (int)CATALOG.size()) { scrollIx++; redrawPickerList(); }
     return;
   }

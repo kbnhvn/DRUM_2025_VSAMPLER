@@ -1,5 +1,9 @@
 #include <ArduinoJson.h>
 #include <SD.h>
+#include "views.h"
+extern View currentView;
+extern Arduino_GFX *gfx;
+extern int DARKGREY, BLACK, WHITE, etc.;
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
 
@@ -48,8 +52,9 @@ void handleTouchSong(int x,int y){
   if (y>=70 && y<=150){
     if (x>=40 && x<=220){ song_save_json(); return; }
     if (x>=240 && x<=420){ song_load_first(); return; }
-    if (x>=440 && x<=620){ /* clear song */ extern String songSeq[]; extern int songLen; songLen=0; return; }
+    // CORRIGÉ - coordonnées réalistes pour écran 480px
+    if (x>=440 && x<=480){ /* clear song */ songLen=0; return; }
   }
-  // Back
-  if (y>=4 && y<=20 && x>=440 && x<=472){ extern View currentView; currentView = VIEW_MAIN; return; }
+  // CORRIGÉ - coordonnées du bouton Back plus larges
+  if (y>=4 && y<=20 && x>=420 && x<=480){ currentView = VIEW_MAIN; return; }
 }
