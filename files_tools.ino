@@ -25,44 +25,6 @@ static void ensureDir(const char* path) {
   if (!SD.exists(path)) SD.mkdir(path);
 }
 
-// Éviter les types dans les signatures - utiliser template ou macro
-template<typename JsonDoc>
-static bool writeJsonAtomic(const String& finalPath, JsonDoc& doc) {
-  String tmpPath = finalPath + ".tmp";
-  File f = SD.open(tmpPath, FILE_WRITE);
-  if (!f) return false;
-  
-  size_t bytesWritten = serializeJson(doc, f);
-  bool writeOk = (bytesWritten > 0) && !f.getWriteError();
-  f.close();
-  
-  if (!writeOk) { 
-    SD.remove(tmpPath); 
-    return false; 
-  }
-  
-  SD.remove(finalPath);
-  return SD.rename(tmpPath, finalPath);
-}
-
-template<typename JsonDoc>
-static bool readJson(const String& path, JsonDoc& doc) {
-  File f = SD.open(path, FILE_READ);
-  if (!f) {
-    Serial.println("[JSON] Cannot open: " + path);
-    return false;
-  }
-  
-  DeserializationError err = deserializeJson(doc, f);
-  f.close();
-  
-  if (err) {
-    Serial.println("[JSON] Parse error: " + String(err.c_str()));
-    return false;
-  }
-  return true;
-}
-
 static String twoDigits(byte n) {
   if (n < 10) return "0" + String(n);
   return String(n);
@@ -73,6 +35,11 @@ void save_pattern(byte idx) {
   ensureDir("/patterns");
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
 
+  // Code inline comme dans song_view.ino
+  String tmp = "/patterns/.tmp.json";
+  File f = SD.open(tmp, FILE_WRITE); 
+  if (!f) return;
+  
   DynamicJsonDocument doc(4096);
   doc["version"]   = 1;
   doc["firstStep"] = (int)firstStep;
@@ -82,16 +49,28 @@ void save_pattern(byte idx) {
   auto steps = doc.createNestedArray("steps");
   for (int s = 0; s < 16; s++) steps.add((uint16_t)pattern[s]);
 
-  bool ok = writeJsonAtomic(path, doc);
-  Serial.println(ok ? "[PATTERN] Saved -> " + path : "[PATTERN] Save FAILED -> " + path);
+  serializeJson(doc, f); 
+  f.close(); 
+  SD.rename(tmp, path);
+  
+  Serial.println("[PATTERN] Saved -> " + path);
 }
 
 void load_pattern(byte idx) {
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
-  DynamicJsonDocument doc(4096);
-  if (!readJson(path, doc)) {
+  
+  // Code inline comme dans song_view.ino  
+  File f = SD.open(path, FILE_READ);
+  if (!f) {
     Serial.println("[PATTERN] Load FAILED -> " + path);
     return;
+  }
+  
+  DynamicJsonDocument doc(4096);
+  if (deserializeJson(doc, f)) { 
+    f.close(); 
+    Serial.println("[PATTERN] Parse FAILED -> " + path);
+    return; 
   }
 
   if (doc.containsKey("firstStep")) firstStep = (byte)((int)doc["firstStep"]);
@@ -104,7 +83,8 @@ void load_pattern(byte idx) {
       pattern[s] = (uint16_t)steps[s].as<uint16_t>();
     }
   }
-
+  
+  f.close();
   Serial.println("[PATTERN] Loaded <- " + path);
 }
 
@@ -113,6 +93,11 @@ void save_sound(byte idx) {
   ensureDir("/sounds");
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
 
+  // Code inline 
+  String tmp = "/sounds/.tmp.json";
+  File f = SD.open(tmp, FILE_WRITE); 
+  if (!f) return;
+  
   DynamicJsonDocument doc(8192);
   doc["version"] = 1;
 
@@ -129,16 +114,28 @@ void save_sound(byte idx) {
     for (int p = 0; p < 8; p++) pa.add((int)ROTvalue[v][p]);
   }
 
-  bool ok = writeJsonAtomic(path, doc);
-  Serial.println(ok ? "[SOUND] Saved -> " + path : "[SOUND] Save FAILED -> " + path);
+  serializeJson(doc, f); 
+  f.close(); 
+  SD.rename(tmp, path);
+  
+  Serial.println("[SOUND] Saved -> " + path);
 }
 
 void load_sound(byte idx) {
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
-  DynamicJsonDocument doc(8192);
-  if (!readJson(path, doc)) {
+  
+  // Code inline
+  File f = SD.open(path, FILE_READ);
+  if (!f) {
     Serial.println("[SOUND] Load FAILED -> " + path);
     return;
+  }
+  
+  DynamicJsonDocument doc(8192);
+  if (deserializeJson(doc, f)) { 
+    f.close(); 
+    Serial.println("[SOUND] Parse FAILED -> " + path);
+    return; 
   }
 
   auto gl = doc["globals"];
@@ -165,6 +162,7 @@ void load_sound(byte idx) {
   // Réapplique les params à l'audio
   for (byte v = 0; v < 16; v++) setSound(v);
   select_rot();
-
+  
+  f.close();
   Serial.println("[SOUND] Loaded <- " + path);
 }
