@@ -698,33 +698,73 @@ void drawWaveform() {
   
   gfx->fillRect(WAVE_ORIGIN_X, WAVE_ORIGIN_Y, WAVE_WIDTH, WAVE_HEIGHT, BLACK);
   gfx->drawRect(WAVE_ORIGIN_X, WAVE_ORIGIN_Y, WAVE_WIDTH, WAVE_HEIGHT, OSCURO);
+  
+  // SÉCURISATION : Vérifier si le sample existe
+  int slot = ROTvalue[selected_sound][0];
+  
+  // Vérifications de sécurité
+  if (slot < 0 || slot >= BANK_SIZE) {
+    Serial.printf("[WAVE] Invalid slot: %d\n", slot);
+    return;
+  }
+  
+  if (SAMPLES[slot] == nullptr) {
+    Serial.printf("[WAVE] No sample in slot %d\n", slot);
+    // Dessiner une ligne plate pour indiquer "pas de sample"
+    int centerY = WAVE_ORIGIN_Y + WAVE_HEIGHT/2;
+    gfx->drawLine(WAVE_ORIGIN_X, centerY, WAVE_ORIGIN_X + WAVE_WIDTH, centerY, DARKGREY);
+    return;
+  }
+  
+  if (ENDS[slot] == 0) {
+    Serial.printf("[WAVE] Sample in slot %d has no length\n", slot);
+    return;
+  }
+  
+  // Maintenant c'est sûr de continuer
   int16_t minVal = INT16_MAX;
   int16_t maxVal = INT16_MIN;
 
-  // Encuentra el mínimo y máximo para normalizar
-  for (size_t i = 0; i < ENDS[ROTvalue[selected_sound][0]]; i++) {
-    if (SAMPLES[ROTvalue[selected_sound][0]][i] < minVal) minVal = SAMPLES[ROTvalue[selected_sound][0]][i];
-    if (SAMPLES[ROTvalue[selected_sound][0]][i] > maxVal) maxVal = SAMPLES[ROTvalue[selected_sound][0]][i];
+  // Trouve le minimum et maximum pour normaliser
+  for (size_t i = 0; i < ENDS[slot] && i < 44100; i++) { // Limite à 44100 échantillons pour éviter freeze
+    if (SAMPLES[slot][i] < minVal) minVal = SAMPLES[slot][i];
+    if (SAMPLES[slot][i] > maxVal) maxVal = SAMPLES[slot][i];
+  }
+  
+  // Protection contre division par zéro
+  if (minVal == maxVal) {
+    minVal = -1000;
+    maxVal = 1000;
   }
 
-  // Dibuja la forma de onda
+  // Dessine la forme d'onde
   for (int x = 0; x < WAVE_WIDTH - 1; x++) {
-    size_t index1 = map(x, 0, WAVE_WIDTH - 1, 0, ENDS[ROTvalue[selected_sound][0]] - 1);
-    size_t index2 = map(x + 1, 0, WAVE_WIDTH - 1, 0, ENDS[ROTvalue[selected_sound][0]] - 1);
+    size_t index1 = map(x, 0, WAVE_WIDTH - 1, 0, min((size_t)ENDS[slot] - 1, (size_t)44099));
+    size_t index2 = map(x + 1, 0, WAVE_WIDTH - 1, 0, min((size_t)ENDS[slot] - 1, (size_t)44099));
 
-    int y1 = map(SAMPLES[ROTvalue[selected_sound][0]][index1], minVal, maxVal, WAVE_HEIGHT - 1, 0);
-    int y2 = map(SAMPLES[ROTvalue[selected_sound][0]][index2], minVal, maxVal, WAVE_HEIGHT - 1, 0);
+    // Double vérification des indices
+    if (index1 >= ENDS[slot] || index2 >= ENDS[slot]) continue;
+    
+    int y1 = map(SAMPLES[slot][index1], minVal, maxVal, WAVE_HEIGHT - 1, 0);
+    int y2 = map(SAMPLES[slot][index2], minVal, maxVal, WAVE_HEIGHT - 1, 0);
+
+    // Clamper les coordonnées Y
+    y1 = constrain(y1, 0, WAVE_HEIGHT - 1);
+    y2 = constrain(y2, 0, WAVE_HEIGHT - 1);
 
     gfx->drawLine(WAVE_ORIGIN_X + x, WAVE_ORIGIN_Y + y1, WAVE_ORIGIN_X + x + 1, WAVE_ORIGIN_Y + y2, ZCYAN);
   }
-  // mostrar marca de inicio y de fin
+  
+  // Montrer marque de début et de fin
   int xini = map(ROTvalue[selected_sound][1], min_values[1], max_values[1], 0, WAVE_WIDTH-1);
-  int xfin = map(ROTvalue[selected_sound][2], min_values[2], max_values[2], 0, WAVE_WIDTH)-1;
+  int xfin = map(ROTvalue[selected_sound][2], min_values[2], max_values[2], 0, WAVE_WIDTH-1);
+  
+  // Clamper les positions
+  xini = constrain(xini, 0, WAVE_WIDTH-1);
+  xfin = constrain(xfin, 0, WAVE_WIDTH-1);
+  
   gfx->drawLine(WAVE_ORIGIN_X+xini, WAVE_ORIGIN_Y, WAVE_ORIGIN_X+xini, WAVE_ORIGIN_Y+WAVE_HEIGHT-1, ZGREEN);
   gfx->drawLine(WAVE_ORIGIN_X+xfin, WAVE_ORIGIN_Y, WAVE_ORIGIN_X+xfin, WAVE_ORIGIN_Y+WAVE_HEIGHT-1, ZRED);
-
-  //setSound(selected_sound);
-
 }
 
 //////////////////// New UI helpers ////////////////////
