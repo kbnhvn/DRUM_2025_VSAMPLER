@@ -68,6 +68,12 @@ void showLastTouched() {
 
 }
 
+void flashButton(int x, int y, int w, int h, int color, const char* texto) {
+  drawButtonBox(x, y, w, h, WHITE, texto, true);
+  delay(150);
+  drawButtonBox(x, y, w, h, color, texto, false);
+}
+
 void clearLastTouched() {
   if (!show_last_touched) {
     return;
@@ -781,16 +787,25 @@ void drawTopBar(const char* title, bool showBack) {
   }
 }
 
-void drawButtonBox(int x,int y,int w,int h, int color, const char* texto){
-  gfx->drawRect(x + 3, y + 3, w - 7, h - 7, color);
-  if (color != DARKGREY) {
-    gfx->drawRect(x + 4, y + 4, w - 9, h - 9, color);
-    gfx->drawRect(x + 5, y + 5, w - 11, h - 11, color);
+void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool pressed = false){
+  int drawColor = pressed ? WHITE : color;
+  int bgColor = pressed ? color : BLACK;
+  
+  gfx->drawRect(x + 3, y + 3, w - 7, h - 7, drawColor);
+  if (drawColor != DARKGREY) {
+    gfx->drawRect(x + 4, y + 4, w - 9, h - 9, drawColor);
+    gfx->drawRect(x + 5, y + 5, w - 11, h - 11, drawColor);
   } else {
     gfx->drawRect(x + 4, y + 4, w - 9, h - 9, BLACK);
     gfx->drawRect(x + 5, y + 5, w - 11, h - 11, BLACK);
   }
-  gfx->setTextColor(color, BLACK);
+  
+  // Remplir le centre si pressé
+  if (pressed) {
+    gfx->fillRect(x + 6, y + 6, w - 13, h - 13, color);
+  }
+  
+  gfx->setTextColor(drawColor, bgColor);
   gfx->setCursor(x + 8, y + (h/2) + 3);
   gfx->print(texto);
 }

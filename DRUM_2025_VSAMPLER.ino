@@ -598,6 +598,8 @@ void setup() {
     // Continuer sans SD - pas de while(1) qui bloque
   }
 
+  stopWiFiAutoReconnect(); 
+
   ///////////////////////////////////////////////////////
   // Sequencer
   Serial.println("[SETUP] Starting sequencer...");

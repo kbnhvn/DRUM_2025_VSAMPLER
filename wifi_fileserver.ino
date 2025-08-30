@@ -126,3 +126,9 @@ static void _wifiConnect(const char* ssid, const char* psk){
 }
 void wifiConnectHome(){ _wifiConnect(WIFI_HOME_SSID, WIFI_HOME_PSK); startFileServer(); }
 void wifiConnectPhone(){ _wifiConnect(WIFI_PHONE_SSID, WIFI_PHONE_PSK); startFileServer(); }
+
+void stopWiFiAutoReconnect() {
+  WiFi.setAutoReconnect(false);
+  WiFi.disconnect(true, true);
+  Serial.println("[WiFi] Auto-reconnect disabled");
+}

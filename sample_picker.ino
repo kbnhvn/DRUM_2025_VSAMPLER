@@ -115,18 +115,35 @@ void handleTouchPicker(int x, int y) {
     }
   }
   
-  // boutons bas : ASSIGN / BACK
+  // boutons bas avec feedback
   int by = listTopY + rowsVis*rowH + 10;
-  // ASSIGN (x:20..140, y:by..by+34)
+  
+  // ASSIGN
   if (x >= 20 && x <= 140 && y >= by && y <= by+34) {
+    // Flash du bouton assign
+    gfx->fillRect(20, by, 120, 34, WHITE);
+    gfx->setCursor(30, by+22); 
+    gfx->setTextColor(BLACK, WHITE);
+    gfx->print("ASSIGN");
+    delay(200);
+    
     if (selIx >= 0) {
       assignIndexToPad(selIx);
+      Serial.printf("[PICKER] Assigned sample %d to pad %d\n", selIx, selected_sound);
     }
     redrawPickerList();
     return;
   }
-  // BACK - CORRIGÉ coordonnées
-  if (x >= 160 && x <= 240 && y >= by && y <= by+34) {
+  
+  // BACK
+  if (x >= 160 && x <= 280 && y >= by && y <= by+34) {
+    gfx->fillRect(160, by, 120, 34, WHITE);
+    gfx->setCursor(170, by+22);
+    gfx->setTextColor(BLACK, WHITE);
+    gfx->print("BACK");
+    delay(200);
+    
+    Serial.println("[PICKER] BACK to main");
     currentView = VIEW_MAIN;
     return;
   }

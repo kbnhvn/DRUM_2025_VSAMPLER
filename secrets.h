@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef SECRETS_H
+#define SECRETS_H
+
 #define WIFI_HOME_SSID   "YourHomeSSID"
 #define WIFI_HOME_PSK    "YourHomePass"
 #define WIFI_PHONE_SSID  "YourPhoneSSID"

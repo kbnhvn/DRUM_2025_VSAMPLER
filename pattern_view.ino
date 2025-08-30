@@ -9,6 +9,7 @@ extern Arduino_GFX *gfx;
 
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
+extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
  
 extern uint16_t pattern[16];      // bitmask 16 steps / pad
 extern int32_t  ROTvalue[16][8];  // SAM,INI,END,PIT,RVS,VOL,PAN,FIL
@@ -97,16 +98,65 @@ void openPatternView(){
   drawButtonBox(40,70,180,80, DARKGREY, "Save");
   drawButtonBox(240,70,180,80, DARKGREY, "New");
   drawButtonBox(440,70,180,80, DARKGREY, "Load");
-  // Branches via DO_KEYPAD (boutons dédiés) ou dispatcher tactile si désiré
+  
+  // Zone back debug
+  gfx->drawRect(400, 0, 80, 30, RED);
+  gfx->setCursor(405, 15);
+  gfx->setTextColor(RED, BLACK);
+  gfx->print("BACK");
 }
 
 void handleTouchPattern(int x,int y){
+  Serial.printf("[PATTERN] Touch at x=%d, y=%d\n", x, y);
+  
   if (y>=70 && y<=150){
-    if (x>=40 && x<=220){ pattern_save_json(); return; }
-    if (x>=240 && x<=420){ pattern_new(); return; }
-    // CORRIGÉ - coordonnées réalistes
-    if (x>=440 && x<=480){ pattern_load_first(); return; }
+    if (x>=40 && x<=220){ 
+      flashButton(40,70,180,80, DARKGREY, "Save");
+      Serial.println("[PATTERN] Saving pattern...");
+      pattern_save_json(); 
+      
+      // Afficher confirmation
+      gfx->setCursor(40, 180);
+      gfx->setTextColor(GREEN, BLACK);
+      gfx->print("Pattern saved!");
+      delay(1000);
+      openPatternView(); // Refresh
+      return; 
+    }
+    if (x>=240 && x<=420){ 
+      flashButton(240,70,180,80, DARKGREY, "New");
+      Serial.println("[PATTERN] Creating new pattern...");
+      pattern_new(); 
+      
+      gfx->setCursor(240, 180);
+      gfx->setTextColor(GREEN, BLACK);
+      gfx->print("Pattern cleared!");
+      delay(1000);
+      openPatternView();
+      return; 
+    }
+    if (x>=440 && x<=480){ 
+      flashButton(440,70,180,80, DARKGREY, "Load");
+      Serial.println("[PATTERN] Loading pattern...");
+      bool loaded = pattern_load_first(); 
+      
+      gfx->setCursor(440, 180);
+      gfx->setTextColor(loaded ? GREEN : RED, BLACK);
+      gfx->print(loaded ? "Loaded!" : "No file!");
+      delay(1000);
+      openPatternView();
+      return; 
+    }
   }
-  // CORRIGÉ - zone Back plus large
-  if (y>=4 && y<=20 && x>=420 && x<=480){ currentView = VIEW_MAIN; return; }
+  
+  // Back
+  if (y>=0 && y<=30 && x>=400 && x<=480){ 
+    Serial.println("[PATTERN] BACK to main");
+    gfx->fillRect(400, 0, 80, 30, WHITE);
+    delay(200);
+    currentView = VIEW_MAIN; 
+    return; 
+  }
+  
+  Serial.printf("[PATTERN] Touch ignored at x=%d, y=%d\n", x, y);
 }
