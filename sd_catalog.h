@@ -18,3 +18,8 @@ extern std::vector<SampleMeta> CATALOG;
 void buildCatalog();                               // (ré)scan non-récursif ou récursif selon ton implémentation actuelle
 bool assignSampleToSlot(int catIndex, int slot);   // charge/carte un sample SD vers un "slot" (SAM) utilisable
 bool loadSampleBuffer(int catIndex, int slot);     // si tu as une API explicite de chargement
+
+static inline float sampleSeconds(const SampleMeta& m) {
+  const float rate = (m.rate > 0) ? (float)m.rate : 44100.0f;
+  return (rate > 0.f) ? (float)m.len / rate : 0.f;
+}

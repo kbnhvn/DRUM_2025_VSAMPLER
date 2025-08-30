@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include <SD.h>
 #include "views.h"
+#include "sd_catalog.h"
 extern View currentView;
 // helpers rendus par LCD_tools.ino
 extern void drawBT(byte bt, int color, String texto);
 extern Arduino_GFX *gfx;
 extern int BPOS[48][4];
 // assign depuis SD
-void assignSampleToSlot(int catIndex, int slot);
 extern byte selected_sound;
 
 // Variables File Browser

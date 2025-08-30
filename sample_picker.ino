@@ -4,18 +4,13 @@ extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
 extern Arduino_GFX *gfx;
 #include "synth_api.h"
+#include "sd_catalog.h"
 extern View currentView;
 
 extern byte    selected_sound;
 extern int32_t ROTvalue[16][8];
 extern void    synthESP32_TRIGGER(unsigned char voice);
 extern void    setSound(byte voice);
-
-// struct SampleMeta déjà défini dans sd_catalog.ino
-#include "sd_catalog.h"
-// Si au lieu de ça tu exposes un tableau C-style, utilise ceci :
-// extern SampleMeta catalog[];
-// extern int catalogCount;
 
 static inline int tempSlot() { return 255; } // slot tampon de preview
 
@@ -27,10 +22,7 @@ static int scrollIx = 0;    // index de la première ligne affichée
 static int selIx    = -1;   // dernier index cliqué (pour ASSIGN)
 
 // helpers
-static inline float secondsOf(const SampleMeta& m) {
-  const float rate = (m.rate > 0) ? (float)m.rate : 44100.0f;
-  return (rate > 0.0f) ? (float)m.len / rate : 0.0f;
-}
+static inline float secondsOf(const SampleMeta& m) { return sampleSeconds(m); }
 
 static void drawRow(int listIndex, int y, bool selected) {
   const SampleMeta& m = CATALOG[listIndex];
