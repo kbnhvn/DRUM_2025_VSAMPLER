@@ -25,8 +25,9 @@ static void ensureDir(const char* path) {
   if (!SD.exists(path)) SD.mkdir(path);
 }
 
-// COMME VOS AUTRES FICHIERS : namespace explicite
-static bool writeJsonAtomic(const String& finalPath, ArduinoJson::DynamicJsonDocument& doc) {
+// Éviter les types dans les signatures - utiliser template ou macro
+template<typename JsonDoc>
+static bool writeJsonAtomic(const String& finalPath, JsonDoc& doc) {
   String tmpPath = finalPath + ".tmp";
   File f = SD.open(tmpPath, FILE_WRITE);
   if (!f) return false;
@@ -40,11 +41,12 @@ static bool writeJsonAtomic(const String& finalPath, ArduinoJson::DynamicJsonDoc
     return false; 
   }
   
-  SD.remove(finalPath);          // idempotent
+  SD.remove(finalPath);
   return SD.rename(tmpPath, finalPath);
 }
 
-static bool readJson(const String& path, ArduinoJson::DynamicJsonDocument& doc) {
+template<typename JsonDoc>
+static bool readJson(const String& path, JsonDoc& doc) {
   File f = SD.open(path, FILE_READ);
   if (!f) {
     Serial.println("[JSON] Cannot open: " + path);
@@ -71,13 +73,13 @@ void save_pattern(byte idx) {
   ensureDir("/patterns");
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
 
-  ArduinoJson::DynamicJsonDocument doc(4096);
+  DynamicJsonDocument doc(4096);
   doc["version"]   = 1;
   doc["firstStep"] = (int)firstStep;
   doc["lastStep"]  = (int)lastStep;
   doc["isMelodic"] = (int)isMelodic;
 
-  ArduinoJson::JsonArray steps = doc.createNestedArray("steps");
+  auto steps = doc.createNestedArray("steps");
   for (int s = 0; s < 16; s++) steps.add((uint16_t)pattern[s]);
 
   bool ok = writeJsonAtomic(path, doc);
@@ -86,7 +88,7 @@ void save_pattern(byte idx) {
 
 void load_pattern(byte idx) {
   String path = "/patterns/pattern_" + twoDigits(idx) + ".json";
-  ArduinoJson::DynamicJsonDocument doc(4096);
+  DynamicJsonDocument doc(4096);
   if (!readJson(path, doc)) {
     Serial.println("[PATTERN] Load FAILED -> " + path);
     return;
@@ -96,7 +98,7 @@ void load_pattern(byte idx) {
   if (doc.containsKey("lastStep"))  lastStep  = (byte)((int)doc["lastStep"]);
   if (doc.containsKey("isMelodic")) isMelodic = (uint16_t)((int)doc["isMelodic"]);
 
-  ArduinoJson::JsonArray steps = doc["steps"];
+  auto steps = doc["steps"];
   if (!steps.isNull() && steps.size() >= 16) {
     for (int s = 0; s < 16; s++) {
       pattern[s] = (uint16_t)steps[s].as<uint16_t>();
@@ -111,19 +113,19 @@ void save_sound(byte idx) {
   ensureDir("/sounds");
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
 
-  ArduinoJson::DynamicJsonDocument doc(8192);
+  DynamicJsonDocument doc(8192);
   doc["version"] = 1;
 
-  ArduinoJson::JsonObject gl = doc.createNestedObject("globals");
+  auto gl = doc.createNestedObject("globals");
   gl["bpm"]          = bpm;
   gl["master_vol"]   = master_vol;
   gl["master_filter"]= master_filter;
   gl["octave"]       = octave;
 
-  ArduinoJson::JsonArray voices = doc.createNestedArray("voices");
+  auto voices = doc.createNestedArray("voices");
   for (int v = 0; v < 16; v++) {
-    ArduinoJson::JsonObject vo = voices.createNestedObject();
-    ArduinoJson::JsonArray pa  = vo.createNestedArray("params");
+    auto vo = voices.createNestedObject();
+    auto pa = vo.createNestedArray("params");
     for (int p = 0; p < 8; p++) pa.add((int)ROTvalue[v][p]);
   }
 
@@ -133,13 +135,13 @@ void save_sound(byte idx) {
 
 void load_sound(byte idx) {
   String path = "/sounds/sound_" + twoDigits(idx) + ".json";
-  ArduinoJson::DynamicJsonDocument doc(8192);
+  DynamicJsonDocument doc(8192);
   if (!readJson(path, doc)) {
     Serial.println("[SOUND] Load FAILED -> " + path);
     return;
   }
 
-  ArduinoJson::JsonObject gl = doc["globals"];
+  auto gl = doc["globals"];
   if (!gl.isNull()) {
     if (gl.containsKey("bpm"))           bpm = (int)gl["bpm"];
     if (gl.containsKey("master_vol"))    master_vol = (int)gl["master_vol"];
@@ -147,11 +149,11 @@ void load_sound(byte idx) {
     if (gl.containsKey("octave"))        octave = (int)gl["octave"];
   }
 
-  ArduinoJson::JsonArray voices = doc["voices"];
+  auto voices = doc["voices"];
   if (!voices.isNull() && voices.size() >= 16) {
     for (int v = 0; v < 16; v++) {
-      ArduinoJson::JsonObject vo = voices[v];
-      ArduinoJson::JsonArray pa = vo["params"];
+      auto vo = voices[v];
+      auto pa = vo["params"];
       if (!pa.isNull() && pa.size() >= 8) {
         for (int p = 0; p < 8; p++) {
           ROTvalue[v][p] = (int32_t)pa[p].as<int>();
