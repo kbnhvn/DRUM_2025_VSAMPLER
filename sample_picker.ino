@@ -13,13 +13,12 @@ extern void    setSound(byte voice);
 extern void assignSampleToSlot(int catIndex, int slot);
 
 // struct SampleMeta déjà défini dans sd_catalog.ino
-struct SampleMeta;
-extern std::vector<SampleMeta> CATALOG;  // <-- OK si sd_catalog.ino l’expose vraiment
+#include "sd_catalog.h
 // Si au lieu de ça tu exposes un tableau C-style, utilise ceci :
 // extern SampleMeta catalog[];
 // extern int catalogCount;
 
-static inline int tempSlot(){ return 255; } // slot tampon
+static inline int tempSlot() { return 255; } // slot tampon de preview
 
 // --- UI layout ---
 static int listTopY = 30;
@@ -31,7 +30,7 @@ static int selIx    = -1;   // dernier index cliqué (pour ASSIGN)
 // helpers
 static inline float secondsOf(const SampleMeta& m) {
   const float rate = (m.rate > 0) ? (float)m.rate : 44100.0f;
-  return (rate > 0 ? (float)m.len / rate : 0.0f);
+  return (rate > 0.0f) ? (float)m.len / rate : 0.0f;
 }
 
 static void drawRow(int listIndex, int y, bool selected) {
@@ -85,7 +84,7 @@ void openSamplePicker() {
 static void previewIndex(int catIndex) {
   if (catIndex < 0 || catIndex >= (int)CATALOG.size()) return;
   int oldSlot = ROTvalue[selected_sound][0];
-  int tmpSlot = TEMP_SLOT();
+  const int tmpSlot = tempSlot();
   assignSampleToSlot(catIndex, tmpSlot);
   ROTvalue[selected_sound][0] = tmpSlot;
   setSound(selected_sound);

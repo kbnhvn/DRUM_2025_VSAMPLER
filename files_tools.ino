@@ -1,5 +1,6 @@
 // files_tools.ino — SD only, JSON patterns & sound-sets
 #include <Arduino.h>
+#include <FS.h>
 #include <SD.h>
 #include <ArduinoJson.h>
 
@@ -28,7 +29,7 @@ static void ensureDir(const char* path) {
   if (!SD.exists(path)) SD.mkdir(path);
 }
 
-static bool writeJsonAtomic(const String& finalPath, DynamicJsonDocument& doc) {
+static bool writeJsonAtomic(const String& finalPath, ArduinoJson::DynamicJsonDocument& doc) {
   String tmpPath = finalPath + ".tmp";
   File f = SD.open(tmpPath, FILE_WRITE);
   if (!f) return false;
@@ -39,7 +40,7 @@ static bool writeJsonAtomic(const String& finalPath, DynamicJsonDocument& doc) {
   return SD.rename(tmpPath, finalPath);
 }
 
-static bool readJson(const String& path, DynamicJsonDocument& doc) {
+static bool readJson(const String& path, ArduinoJson::DynamicJsonDocument& doc) {
   File f = SD.open(path, FILE_READ);
   if (!f) return false;
   DeserializationError err = deserializeJson(doc, f);
