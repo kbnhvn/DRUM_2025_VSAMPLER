@@ -1,10 +1,12 @@
 #include <Arduino.h>
-#include <vector>  // <-- nécessaire pour std::vector
+// #include <vector>  // <-- nécessaire pour std::vector
+#include "sd_catalog.h"
+
 extern void drawTopBar(const char* title, bool showBack);
 extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
 extern Arduino_GFX *gfx;
 #include "synth_api.h"
-#include "sd_catalog.h"
+
 extern View currentView;
 
 extern byte    selected_sound;
@@ -22,7 +24,9 @@ static int scrollIx = 0;    // index de la première ligne affichée
 static int selIx    = -1;   // dernier index cliqué (pour ASSIGN)
 
 // helpers
-static inline float secondsOf(const SampleMeta& m) { return sampleSeconds(m); }
+static inline float secondsOf(const SampleMeta& m) {
+  return sampleSeconds(m);
+}
 
 static void drawRow(int listIndex, int y, bool selected) {
   const SampleMeta& m = CATALOG[listIndex];

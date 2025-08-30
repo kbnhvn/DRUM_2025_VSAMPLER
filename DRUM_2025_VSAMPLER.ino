@@ -9,6 +9,7 @@
 // includes
 #include <Arduino.h>
 #include "synth_api.h"
+#include "sd_catalog.h"
 #include "esp_task_wdt.h"
 
 // --- Prototypes nécessaires (déclarés ailleurs) ---
@@ -228,7 +229,6 @@ const String tbuttons2[8] = {"  SHIFT  ", "  - 1   ", "  - 10   ", "  + 10   ", 
   extern String   sound_names[BANK_SIZE];
   extern void initSD();
   extern void buildCatalog();
-  extern void assignSampleToSlot(int catIndex, int slot);
 #endif
 
 
