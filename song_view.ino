@@ -5,7 +5,7 @@
 extern Arduino_GFX *gfx;
 extern View currentView;
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed = false);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed);  // SUPPRIMER = false
 extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
 
 static String songSeq[64]; 

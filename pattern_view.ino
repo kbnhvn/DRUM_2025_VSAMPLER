@@ -4,7 +4,7 @@
 
 extern Arduino_GFX *gfx;
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed = false);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed);  // SUPPRIMER = false
 extern void flashButton(int x, int y, int w, int h, int color, const char* texto);
 extern uint16_t pattern[16];
 extern int32_t  ROTvalue[16][8];

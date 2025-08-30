@@ -782,6 +782,7 @@ void drawTopBar(const char* title, bool showBack) {
 }
 
 void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool pressed = false){
+
   int drawColor = pressed ? WHITE : color;
   int bgColor = pressed ? color : BLACK;
   

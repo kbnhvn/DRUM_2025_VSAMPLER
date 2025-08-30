@@ -3,7 +3,7 @@
 #include "sd_catalog.h"
 
 extern void drawTopBar(const char* title, bool showBack);
-extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt);
+extern void drawButtonBox(int x,int y,int w,int h,int color,const char* txt, bool pressed);  // SUPPRIMER = false
 extern Arduino_GFX *gfx;
 #include "synth_api.h"
 
