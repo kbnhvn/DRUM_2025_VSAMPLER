@@ -3,12 +3,18 @@
 #include <vector>
 #include "sd_catalog.h"
 
+// CORRECTION: Déclaration manquante du CATALOG global
+std::vector<SampleMeta> CATALOG;
+
 #define BANK_SIZE 256
 int16_t* SAMPLES[BANK_SIZE];
 uint64_t ENDS[BANK_SIZE];
 String   sound_names[BANK_SIZE];
 
-static String stripExt(const String& n){ int d=n.lastIndexOf('.'); return (d>0)? n.substring(0,d):n; }
+static String stripExt(const String& n){ 
+  int d=n.lastIndexOf('.'); 
+  return (d>0)? n.substring(0,d):n; 
+}
 
 static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
   File f = SD.open(path, FILE_READ);
@@ -46,14 +52,19 @@ static void scanDir(const String& d){
     f.close();
     if (isDir) scanDir(d + "/" + nm);
     else if (nm.endsWith(".wav") || nm.endsWith(".WAV")){
-      SampleMeta m; m.path = d + "/" + nm; m.name = stripExt(nm);
+      SampleMeta m; 
+      m.path = d + "/" + nm; 
+      m.name = stripExt(nm);
       CATALOG.push_back(m);
     }
   }
 }
 
 void initSD(){
-  if (!SD.begin()) { Serial.println("[SD] init failed"); return; }
+  if (!SD.begin()) { 
+    Serial.println("[SD] init failed"); 
+    return; 
+  }
   if (!SD.exists("/samples")) SD.mkdir("/samples");
 }
 
@@ -61,19 +72,44 @@ void buildCatalog(){
   CATALOG.clear();
   scanDir("/samples");
   Serial.printf("[SD] catalog: %u files\n", (unsigned)CATALOG.size());
-  for (int i=0;i<BANK_SIZE;i++){ SAMPLES[i]=nullptr; ENDS[i]=0; sound_names[i]=""; }
+  for (int i=0;i<BANK_SIZE;i++){ 
+    SAMPLES[i]=nullptr; 
+    ENDS[i]=0; 
+    sound_names[i]=""; 
+  }
   int n = min(BANK_SIZE, (int)CATALOG.size());
-  for (int i=0;i<n;i++){ sound_names[i]=CATALOG[i].name; }
+  for (int i=0;i<n;i++){ 
+    sound_names[i]=CATALOG[i].name; 
+  }
 }
 
-// Charge un sample dans un slot donné
+// CORRECTION: Fonction incomplète - manquait return true à la fin
 bool assignSampleToSlot(int catIndex, int slot){
   if (slot<0 || slot>=BANK_SIZE) return false;
   if (catIndex<0 || catIndex>=(int)CATALOG.size()) return false;
-  if (!SAMPLES[slot]){
-    int16_t* b=nullptr; uint32_t l=0;
-    if (!readWav16Mono(CATALOG[catIndex].path.c_str(), &b, &l)) return false;
-    SAMPLES[slot]=b; ENDS[slot]=(l>0)?(l-1):0;
+  
+  // Libérer l'ancien sample si nécessaire
+  if (SAMPLES[slot]){
+    free(SAMPLES[slot]);
+    SAMPLES[slot] = nullptr;
+    ENDS[slot] = 0;
   }
-  sound_names[slot]=CATALOG[catIndex].name;
+  
+  int16_t* b=nullptr; 
+  uint32_t l=0;
+  if (!readWav16Mono(CATALOG[catIndex].path.c_str(), &b, &l)) return false;
+  
+  SAMPLES[slot] = b; 
+  ENDS[slot] = (l>0) ? (l-1) : 0;
+  sound_names[slot] = CATALOG[catIndex].name;
+  
+  // Mettre à jour les métadonnées dans CATALOG
+  CATALOG[catIndex].buf = b;
+  CATALOG[catIndex].len = l;
+  
+  return true;  // CORRECTION: return manquant
+}
+
+bool loadSampleBuffer(int catIndex, int slot) {
+  return assignSampleToSlot(catIndex, slot);
 }
