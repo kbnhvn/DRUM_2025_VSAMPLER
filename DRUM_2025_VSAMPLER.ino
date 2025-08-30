@@ -512,29 +512,24 @@ void setup() {
   // Serial
   Serial.begin(115200);
   delay(200);
+  Serial.println("=== DRUM SAMPLER 2025 Starting ===");
+  
   // Watchdog des tâches : inutile ici et source de boot-loop si une tâche ne yield pas
   esp_task_wdt_deinit();
+  
   // Seed via RNG matériel (évite analogRead(0) non ADC sur S3)
   randomSeed(esp_random());
-  // // FX
-  // if (!psramFound()) {
-  //   Serial.println("¡PSRAM no detectada!");
-  //   while (1);
-  // }
-
-  // if (!initAudioFX()) {
-  //   Serial.println("Error inicializando efectos");
-  //   while (1);
-  // }
   
+  Serial.println("[SETUP] Basic init OK");
+
   // Iniciar el primer puerto I2C
   Wire.begin(TOUCH_SDA, TOUCH_SCL,400000);
 
 //........................................................................................................................
 // LCD and TOUCH
+  Serial.println("[SETUP] Starting display...");
   // Init Display
   if (!gfx->begin())
-  // if (!gfx->begin(80000000)) /* specify data bus speed */
   {
     Serial.println("gfx->begin() failed!");
   }
@@ -551,22 +546,11 @@ void setup() {
   // Touch
   resetGT911();
   delay(100);
-
-
-  // Serial 2
- // Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2);    //Hardware Serial of ESP32
   
-  // MIDI USB
-//  MIDI.begin(MIDI_CHANNEL_OMNI);
-//  MIDI.setHandleNoteOn(handleNoteOn);  
-//  MIDI.setHandleControlChange(handleCC);
-//  // check device mounted
-//  if ( !TinyUSBDevice.mounted() ){
-//    Serial.println("Error USB");
-//  }
-
+  Serial.println("[SETUP] Display and touch OK");
 
   // Synth
+  Serial.println("[SETUP] Starting synth...");
   synthESP32_begin();
 
   // Set 16 voices
@@ -576,27 +560,51 @@ void setup() {
   // Set master vol
   synthESP32_setMVol(master_vol);
   // Set master filter
-  synthESP32_setMFilter(master_filter);  
+  synthESP32_setMFilter(master_filter);
+  
+  Serial.println("[SETUP] Synth OK");
   
   ///////////////////////////////////////////////////////
+  // SD Card avec gestion d'erreur robuste
+  Serial.println("[SETUP] Starting SD...");
+  
   // Inicializar otro bus SPI para la tarjeta SD
   sdSPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
 
-  // Inicializar la tarjeta SD
-  if (!SD.begin(SD_CS,sdSPI)) {
-    Serial.println("Error inicializando la tarjeta SD por SPI");
-    while (1);
+  // Inicializar la tarjeta SD avec retry
+  bool sdOk = false;
+  for (int retry = 0; retry < 3; retry++) {
+    if (SD.begin(SD_CS, sdSPI)) {
+      sdOk = true;
+      break;
+    }
+    Serial.printf("[SETUP] SD init attempt %d failed, retrying...\n", retry + 1);
+    delay(500);
   }
-  Serial.println("SD init OK");
-  extern void buildCatalog();
-  if (&buildCatalog) { buildCatalog(); }
+  
+  if (sdOk) {
+    Serial.println("[SETUP] SD init OK");
+    
+    // Build catalog avec gestion d'erreur
+    Serial.println("[SETUP] Building sample catalog...");
+    try {
+      buildCatalog();
+      Serial.println("[SETUP] Sample catalog built successfully");
+    } catch (...) {
+      Serial.println("[SETUP] ERROR: Catalog build failed, continuing without samples");
+    }
+  } else {
+    Serial.println("[SETUP] WARNING: SD card failed, running without samples");
+    // Continuer sans SD - pas de while(1) qui bloque
+  }
 
   ///////////////////////////////////////////////////////
-
-  // Seq
+  // Sequencer
+  Serial.println("[SETUP] Starting sequencer...");
+  
   // fill melodic with 60
-  for  (byte a=0;a<16;a++){
-    for  (byte b=0;b<16;b++){
+  for (byte a=0;a<16;a++){
+    for (byte b=0;b<16;b++){
      melodic[a][b]=60;
     }    
   }
@@ -608,31 +616,15 @@ void setup() {
   uClock.setOnSync24(onSync24Callback);
   uClock.setTempo(bpm);
 
-  // initTimer(onSync24);
-  // setBPM(120);  // 120 BPM
+  Serial.println("[SETUP] Sequencer OK");
 
 //........................................................................................................................
-//
-//   B L E M I D I
-//
-  // BLEMidiServer.begin("zc2025ds");
-
-  // BLEMidiServer.setNoteOnCallback(onNoteOnBLE);
-
-  // BLEMidiServer.setOnConnectCallback([]() {
-  //   Serial.println("Connected");
-  // });
-  // BLEMidiServer.setOnDisconnectCallback([](){    
-  //   Serial.println("Disconnected");
-  // });
-
-//........................................................................................................................
-
+  // UI final
   select_rot();
   draw8aBar();
   draw8bBar();
   
-
+  Serial.println("=== SETUP COMPLETE ===");
 }
 
 //////////////////////////////  L O O P  //////////////////////////////
@@ -640,6 +632,7 @@ void setup() {
 void loop() {
 
   loopWeb();
+  
   // flag to do things outside sequencer timer isr
   if (load_flag){
     load_flag=false;
@@ -666,8 +659,8 @@ void loop() {
   showLastTouched();
   clearLastTouched();
 
-  // Weird code!!!! Segunda carga de setsoud porque con la primera no se generan bien el inicio y el fin de sample y el volumen/pan. Parece que no le da tiempo.
-  if (flag_ss=true){
+  // CORRECTION: == au lieu de =
+  if (flag_ss == true){
     count_loop++;
     if (count_loop==2){
       count_loop=0;
@@ -677,7 +670,6 @@ void loop() {
       } 
     } 
   }
-
 }
 
 
