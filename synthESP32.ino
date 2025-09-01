@@ -1,5 +1,8 @@
 #include "synth_api.h"
 #include <Arduino.h>
+#include "driver/i2s.h"
+#include "config_pins.h"
+extern int I2S_BCK_PIN, I2S_WS_PIN, I2S_DATA_OUT_PIN;
 
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
@@ -398,6 +401,64 @@ extern LowPassFilter FILTROS[18];    // si tes filtres master L/R = index 16/17
 extern const int cutoff;             // bornes pour setCutoff éventuel
 extern const int reso;               // etc.
 
+// NOUVEAU: Switch audio HP/DAC
+static bool currentUseDAC = false;
+
+void switchAudioOutput(bool useDAC) {
+  if (currentUseDAC == useDAC) return; // Pas de changement
+  
+  Serial.printf("[AUDIO] Switching from %s to %s\n", 
+                currentUseDAC ? "DAC" : "HP", 
+                useDAC ? "DAC" : "HP");
+  
+  // Arrêter I2S proprement
+  i2s_driver_uninstall(I2S_NUM_0);
+  delay(100);
+  
+  // Nouvelle config pins
+  i2s_pin_config_t pin_config;
+  if (useDAC) {
+    // PCM5102A DAC externe
+    pin_config.bck_io_num = I2S_PCM_BCLK;
+    pin_config.ws_io_num = I2S_PCM_LRCK;
+    pin_config.data_out_num = I2S_PCM_DOUT;
+  } else {
+    // HP interne
+    pin_config.bck_io_num = I2S_SPK_BCLK;
+    pin_config.ws_io_num = I2S_SPK_LRCK;  
+    pin_config.data_out_num = I2S_SPK_DOUT;
+  }
+  pin_config.data_in_num = I2S_PIN_NO_CHANGE;
+  
+  // Réinstaller I2S avec même config audio
+  i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
+    .sample_rate = SAMPLE_RATE,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+    .communication_format = (i2s_comm_format_t)(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2,
+    .dma_buf_count = DMA_NUM_BUF,
+    .dma_buf_len = DMA_BUF_LEN,
+    .use_apll = true,
+  };
+  
+  esp_err_t err = i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
+  if (err != ESP_OK) {
+    Serial.printf("[AUDIO] I2S install failed: %d\n", err);
+    return;
+  }
+  
+  err = i2s_set_pin(I2S_NUM_0, &pin_config);
+  if (err != ESP_OK) {
+    Serial.printf("[AUDIO] I2S pin config failed: %d\n", err);
+    return;
+  }
+  
+  currentUseDAC = useDAC;
+  Serial.println("[AUDIO] Audio output switched successfully");
+}
+
 // ===== helpers internes (safe/robustes) =====
 
 static inline uint64_t clampU64(uint64_t v, uint64_t lo, uint64_t hi){
@@ -472,10 +533,16 @@ void synthESP32_setMFilter(int v){
 
 // Déclenchement pad « normal » (prend SAM/INI/END/PIT du pad)
 void synthESP32_TRIGGER(uint8_t voice){
-  if (voice >= 16) return;
+  if (voice >= 16) {
+    Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
+    return;
+  }
 
   const int slot = (int)ROTvalue[voice][0];
-  if (slot < 0) return;
+  if (slot < 0 || slot >= BANK_SIZE) {
+    Serial.printf("[SYNTH] Invalid slot %d for voice %d\n", slot, voice);
+    return;
+  }
 
   const int32_t ini12 = ROTvalue[voice][1];
   const int32_t end12 = ROTvalue[voice][2];
@@ -485,7 +552,10 @@ void synthESP32_TRIGGER(uint8_t voice){
   const int16_t* buf = SAMPLES[slot];
   const uint64_t len = ENDS[slot] + 1;   // ENDS = maxIndex, on veut une longueur
 
-  if (!buf || len < 2) return;
+  if (!buf || len < 2) {
+    Serial.printf("[SYNTH] No sample in slot %d for voice %d\n", slot, voice);
+    return;
+  }
 
   uint64_t start=0, end=0;
   applyStartEndForSlot(slot, len, ini12, end12, start, end);
@@ -493,15 +563,28 @@ void synthESP32_TRIGGER(uint8_t voice){
   // programme la voix pour la prochaine trame audio
   samplePos[voice] = (rev ? end : start) << 16;     // 16.16
   stepSize[voice]  = makeStepSizeFromPit(pit) * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 0;  // 0 = (re)lancer la voix (selon ta convention)
+  latch[voice]     = 1;  // 0 = (re)lancer la voix (selon ta convention)
+
+  Serial.printf("[SYNTH] Triggered voice %d, slot %d, pitch %d\n", voice, slot, pit);
 }
 
 // Déclenchement avec pitch explicite (mode piano) : on ignore ROTvalue[..][3] et on impose pitch
 void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
-  if (voice >= 16) return;
+  if (voice >= 16) {
+    Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
+    return;
+  }
+  
+  if (pitch < 0 || pitch > 127) {
+    Serial.printf("[SYNTH] Invalid pitch: %d\n", pitch);
+    return;
+  }
 
   const int slot = (int)ROTvalue[voice][0];
-  if (slot < 0) return;
+  if (slot < 0 || slot >= BANK_SIZE) {
+    Serial.printf("[SYNTH] Invalid slot %d for voice %d\n", slot, voice);
+    return;
+  }
 
   const int32_t ini12 = ROTvalue[voice][1];
   const int32_t end12 = ROTvalue[voice][2];
@@ -510,7 +593,10 @@ void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
   const int16_t* buf = SAMPLES[slot];
   const uint64_t len = ENDS[slot] + 1;
 
-  if (!buf || len < 2) return;
+  if (!buf || len < 2) {
+    Serial.printf("[SYNTH] No sample in slot %d for voice %d\n", slot, voice);
+    return;
+  }
 
   uint64_t start=0, end=0;
   applyStartEndForSlot(slot, len, ini12, end12, start, end);
@@ -521,5 +607,7 @@ void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
 
   samplePos[voice] = (rev ? end : start) << 16; // 16.16
   stepSize[voice]  = step * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 0;
+  latch[voice]     = 1; // CORRECTION: 1 = activer
+  
+  Serial.printf("[SYNTH] Triggered voice %d with pitch %d (MIDI)\n", voice, pitch);
 }

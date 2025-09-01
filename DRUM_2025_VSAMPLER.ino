@@ -288,9 +288,10 @@ int octave=5;
 ////////////////////////////// SEQ 
 int bpm=120;
 byte selected_pattern=0;
-byte s_old_selected_pattern=99;
-byte sstep=0;
+byte s_old_selected_pattern=255;
+volatile byte sstep=0;            // volatile car modifié dans ISR
 int s_old_sstep=-1;
+volatile bool load_flag=false;    // volatile car modifié dans ISR
 
 uint16_t mutes=0;
 uint16_t solos=0;
@@ -299,7 +300,7 @@ uint16_t pattern[16];
 byte fx1=0; 
 
 byte selected_memory=0;
-byte s_old_selected_memory=99;
+byte s_old_selected_memory=255;
 int pattern_song_counter=-1;
 byte last_pattern_song=255;
 uint8_t  melodic[16][16];
@@ -316,16 +317,15 @@ byte newLastMemory=15;
 
 byte selected_sound=0;
 byte oldselected_sound=0;
-byte s_old_selected_sound=99;
+byte s_old_selected_sound=255;
 //byte s_old_drawWaveform=99;
 byte selected_sndSet=0;
-byte s_old_selected_sndSet=99;
+byte s_old_selected_sndSet=255;
 int ztranspose=0;
 int zmpitch=0;
-bool load_flag=false;
 
-byte sync_state=0; // 0 no sync, 1, master, 2 slave
-bool sync_flag=false;
+byte sync_state=0;              // 0 no sync, 1 master, 2 slave
+volatile bool sync_flag=false;  // volatile car modifié dans ISR
 
 // ESCALAS (255 = void)
 uint8_t selected_scale=0;
@@ -373,8 +373,8 @@ byte shiftR1=false;
 byte old_shiftR1=true;
 
 // 8 sound parameters + bpm + master vol + transpose + master filter + octave + Pattern song selector + Sync mode
-const int max_values[16]={49,2047,2047,127,1,127, 127,127,400,127, 1,127,20, 1,2,12}; 
-const int min_values[16]={ 0,  0,  0,  0,  0,  0,-127,  0,  0,  0,-1,  0, 0,-1,0, 0};
+const int max_values[16]={255,2047,2047,127,1,127, 127,127,400,127, 1,127,20, 1,2,12}; 
+const int min_values[16]={  0,   0,   0,  0,0,  0,-127,  0,  0,  0,-1,  0, 0,-1,0, 0};
 
 int32_t ROTvalue[16][8]={ // init sound values
   { 16,0, 2047, 60,0,80,-10,0}, // THIS IS VOICE #0
@@ -397,7 +397,7 @@ int32_t ROTvalue[16][8]={ // init sound values
 };
 
 byte selected_rot=0;
-byte s_old_selected_rot=1;
+byte s_old_selected_rot=255;
 
 byte trigger_on[48]; // 16 pads + 8 funcs + 8 norot buttons + 16 bars
 byte nkey;
@@ -406,16 +406,16 @@ byte nkey;
 byte modeZ=0;
 int s_old_modeZ=-1;
 
-bool playing     = false;
+volatile bool playing = false;      // volatile car lu dans ISR
 bool pre_playing = false;
 bool songing     = false; // switch to make load auto patterns++
 bool recording   = false;
 bool shifting    = false;
 
-bool clearPADSTEP=false;
+volatile bool clearPADSTEP=false;   // volatile car modifié dans ISR
 bool clearPATTERNPADS=false;
-bool refreshPATTERN=true;
-bool refreshPADSTEP=false;
+volatile bool refreshPATTERN=true;  // volatile car modifié dans ISR
+volatile bool refreshPADSTEP=false;
 bool refreshMODES=true;
 //bool refreshPADTOUCHED=false;
 
@@ -633,6 +633,7 @@ void setup() {
 
 void loop() {
 
+  esp_task_wdt_reset();
   loopWeb();
   
   // flag to do things outside sequencer timer isr
@@ -654,6 +655,12 @@ void loop() {
   }
 
   read_touch();
+
+  // CORRECTION: Vérifier si uClock tourne mais que playing=false (désync)
+  if (!playing && uClock.isRunning()) {
+    uClock.stop();
+  }
+  
   DO_KEYPAD();
   REFRESH_KEYS();
   REFRESH_STATUS();

@@ -2,6 +2,10 @@
 #include "views.h"
 #include "synth_api.h"
 extern View currentView;
+
+// Import uClock pour contrôle du séquenceur
+#include <uClock.h>
+
 void openPatternView();
 void openMenuView();
 void openSongView();
@@ -283,20 +287,24 @@ void DO_KEYPAD(){
             case 22:
               if (playing){
                 uClock.stop();
-                //stopTimer();
-                sstep=firstStep;
-                recording=false;
-                clearPADSTEP=true;
-                pattern_song_counter=0; 
+                sstep = firstStep;
+                recording = false;
+                clearPADSTEP = true;
+                pattern_song_counter = 0;
+                Serial.println("[SEQ] Stopped");
               } else {
                 if (sync_state==2){ // if this machine is slave dont start playing now
                   pre_playing=true;
+                  Serial.println("[SEQ] Slave mode - waiting for sync");
                 } else {
                 if (songing) pattern_song_counter=selected_pattern;
+                  uClock.setTempo(bpm);
                   uClock.start();
                   //startTimer();
                   sstep=firstStep;
-                  refreshPADSTEP=true;  
+                  refreshPADSTEP=true; 
+                  Serial.printf("[SEQ] Started: BPM=%d, firstStep=%d, lastStep=%d\n", 
+                                bpm, firstStep, lastStep);                   
                 }
               }
               playing=!playing; 
@@ -329,13 +337,16 @@ void DO_KEYPAD(){
             case 22:
               if (playing){
                 recording=!recording;
+                Serial.printf("[SEQ] Recording %s\n", recording ? "ON" : "OFF");
               } else {
+                uClock.setTempo(bpm);
                 uClock.start();
                 //startTimer();
                 recording=true;
                 playing=true;
                 sstep=firstStep;
                 refreshPADSTEP=true;  
+                Serial.printf("[SEQ] Started recording: BPM=%d\n", bpm);
               }
               if (songing) recording=false; // in song mode cant save modified patterns. I would need a new flag. so much cpu time?
               //refreshMODES=true;  
@@ -413,6 +424,7 @@ void DO_KEYPAD(){
           if (selected_rot==2){
             ROTvalue[selected_sound][2]=max_values[2];
           }
+          setSound(selected_sound);
         }
         select_rot();
         drawBar(selected_rot);

@@ -1,3 +1,8 @@
+// Import views pour redraw system
+#include "views.h"
+extern View currentView;
+extern void drawMenuView();
+
 // #define BLACK RGB565_BLACK
 // #define NAVY RGB565_NAVY
 // #define DARKGREEN RGB565_DARKGREEN
@@ -36,6 +41,15 @@
 #define PADCOLOR RGB565(64, 64, 75)
 #define ZBLACK RGB565(1, 1, 1)
 
+// Couleurs UI modernes pour les vues secondaires
+#define UI_PRIMARY   RGB565(100, 150, 255)
+#define UI_SUCCESS   RGB565(50, 200, 100) 
+#define UI_WARNING   RGB565(255, 165, 0)
+#define UI_DANGER    RGB565(255, 80, 80)
+#define UI_SURFACE   RGB565(40, 45, 55)
+#define UI_ON_SURFACE RGB565(200, 205, 215)
+#define UI_ACCENT    RGB565(130, 255, 180)
+
 const uint8_t icon_on[] = {
     0b00000000, 
     0b11111111, 
@@ -56,6 +70,90 @@ const uint8_t icon_off[] = {
     0b00000000,
     0b11111111, 
 };
+
+// NOUVEAU: Système de redraw complet
+void forceCompleteRedraw() {
+  Serial.println("[UI] Force complete redraw");
+  
+  // Clear complet de l'écran
+  gfx->fillScreen(BLACK);
+  
+  // Redraw selon la vue courante
+  switch (currentView) {
+    case VIEW_MAIN:
+      // Interface principale complète
+      drawScreen1_ONLY1();         // Pads + boutons
+      draw8aBar();                 // Barres 0-7
+      draw8bBar();                 // Barres 8-15
+      show_dark_selectors_ONLY1(); // Sélecteurs
+      show_all_bars_ONLY1();       // Contours barres
+      
+      // Forcer le refresh des états
+      refreshPATTERN = true;
+      refreshMODES = true;
+      refreshPADSTEP = true;
+      
+      // Reset des anciennes valeurs pour forcer màj
+      s_old_selected_sound = 255;
+      s_old_selected_pattern = 255; 
+      s_old_selected_sndSet = 255;
+      s_old_selected_memory = 255;
+      s_old_selected_rot = 255;
+      s_old_modeZ = -1;
+      s_old_sstep = -1;
+      
+      Serial.println("[UI] Main view redrawn completely");
+      break;
+      
+    case VIEW_MENU:
+      drawMenuView();
+      break;
+      
+    case VIEW_PATTERN:
+      openPatternView();
+      break;
+      
+    case VIEW_SONG:
+      openSongView();
+      break;
+      
+    case VIEW_BROWSER:
+      openBrowserView();
+      break;
+      
+    case VIEW_PICKER:
+      openSamplePicker();
+      break;
+      
+    default:
+      Serial.printf("[UI] Unknown view: %d\n", currentView);
+      currentView = VIEW_MAIN;
+      forceCompleteRedraw();
+      break;
+  }
+}
+
+// NOUVEAU: Bouton moderne pour les vues secondaires
+void drawModernButton(int x, int y, int w, int h, int color, const char* text, bool active, bool pressed) {
+  if (pressed) {
+    gfx->fillRect(x + 2, y + 2, w - 4, h - 4, color);
+    gfx->drawRect(x + 1, y + 1, w - 2, h - 2, UI_ON_SURFACE);
+  } else {
+    gfx->fillRect(x + 3, y + 3, w - 3, h - 3, RGB565(20, 20, 25)); // Shadow
+    gfx->fillRect(x, y, w - 3, h - 3, active ? color : UI_SURFACE);
+    gfx->drawRect(x, y, w - 3, h - 3, active ? color : UI_ON_SURFACE);
+    gfx->drawRect(x + 1, y + 1, w - 5, h - 5, active ? color : RGB565(60, 65, 75));
+  }
+  
+  int textColor = active ? BLACK : UI_ON_SURFACE;
+  if (pressed) textColor = WHITE;
+  
+  gfx->setTextColor(textColor, pressed ? color : (active ? color : UI_SURFACE));
+  int textX = x + (w - strlen(text) * 6) / 2;
+  int textY = y + (h / 2) + 3;
+  gfx->setCursor(textX, textY);
+  gfx->print(text);
+}
 
 void showLastTouched() {
   if (!show_last_touched) {
@@ -201,6 +299,14 @@ void drawBT(byte bt, int color, String texto = "") {
 }
 
 void REFRESH_KEYS() {
+
+  // NOUVEAU: Protection contre variables non initialisées
+  if (s_old_selected_sound > 15) s_old_selected_sound = 0;
+  if (s_old_selected_pattern > 15) s_old_selected_pattern = 0;
+  if (s_old_selected_sndSet > 15) s_old_selected_sndSet = 0;
+  if (s_old_selected_memory > 15) s_old_selected_memory = 0;
+  if (s_old_selected_rot > 15) s_old_selected_rot = 0;
+  if (modeZ < 0 || modeZ > 23) modeZ = tPad;
 
   if (refreshMODES) {
     refreshMODES = false;
@@ -389,7 +495,7 @@ void REFRESH_KEYS() {
     // Si SEQ activo muestro los pads que suenan
     if (playing) {
       for (byte f = 0; f < 16; f++) {
-        if bitRead (pattern[f], sstep) {
+        if (bitRead(pattern[f], sstep)) {
           drawPADsound(f, BLUE);
         } else {
           drawPADsound(f, OSCURO);
@@ -739,8 +845,10 @@ void drawWaveform() {
 
   // Dessine la forme d'onde
   for (int x = 0; x < WAVE_WIDTH - 1; x++) {
-    size_t index1 = map(x, 0, WAVE_WIDTH - 1, 0, min((size_t)ENDS[slot] - 1, (size_t)44099));
-    size_t index2 = map(x + 1, 0, WAVE_WIDTH - 1, 0, min((size_t)ENDS[slot] - 1, (size_t)44099));
+    // CORRECTION: Protection contre débordement d'index
+    size_t maxIdx = min((size_t)ENDS[slot], (size_t)44100) - 1;
+    size_t index1 = map(x, 0, WAVE_WIDTH - 1, 0, maxIdx);
+    size_t index2 = map(x + 1, 0, WAVE_WIDTH - 1, 0, maxIdx);
 
     // Double vérification des indices
     if (index1 >= ENDS[slot] || index2 >= ENDS[slot]) continue;
@@ -765,6 +873,29 @@ void drawWaveform() {
   
   gfx->drawLine(WAVE_ORIGIN_X+xini, WAVE_ORIGIN_Y, WAVE_ORIGIN_X+xini, WAVE_ORIGIN_Y+WAVE_HEIGHT-1, ZGREEN);
   gfx->drawLine(WAVE_ORIGIN_X+xfin, WAVE_ORIGIN_Y, WAVE_ORIGIN_X+xfin, WAVE_ORIGIN_Y+WAVE_HEIGHT-1, ZRED);
+}
+
+// NOUVEAU: Flash button pour feedback tactile
+void flashButton(int x, int y, int w, int h, int color, const char* texto) {
+  drawModernButton(x, y, w, h, color, texto, false, true);
+  delay(150);
+  drawModernButton(x, y, w, h, color, texto, false, false);
+}
+
+// NOUVEAU: Barre de progression moderne
+void drawProgressBar(int x, int y, int w, int h, int percent, int color) {
+  gfx->fillRect(x, y, w, h, UI_SURFACE);
+  gfx->drawRect(x, y, w, h, UI_ON_SURFACE);
+  int fillW = (w - 4) * percent / 100;
+  if (fillW > 0) {
+    gfx->fillRect(x + 2, y + 2, fillW, h - 4, color);
+  }
+  gfx->setTextColor(WHITE, UI_SURFACE);
+  char txt[8];
+  sprintf(txt, "%d%%", percent);
+  int textX = x + (w - strlen(txt) * 6) / 2;
+  gfx->setCursor(textX, y + (h/2) + 3);
+  gfx->print(txt);
 }
 
 //////////////////// New UI helpers ////////////////////
@@ -802,11 +933,4 @@ void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool p
   gfx->setTextColor(drawColor, bgColor);
   gfx->setCursor(x + 8, y + (h/2) + 3);
   gfx->print(texto);
-}
-
-// AJOUTER après drawButtonBox :
-void flashButton(int x, int y, int w, int h, int color, const char* texto) {
-  drawButtonBox(x, y, w, h, color, texto, true);
-  delay(150);
-  drawButtonBox(x, y, w, h, color, texto, false);
 }
