@@ -9,6 +9,7 @@
 #include "synth_api.h"
 #include "sd_catalog.h"
 #include "esp_task_wdt.h"
+#include "views.h"
 
 // CORRECTION: Ajouter les variables manquantes au début
 volatile uint8_t sstep = 0;            // CORRECTION: uint8_t au lieu de byte
