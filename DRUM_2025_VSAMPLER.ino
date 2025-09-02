@@ -89,10 +89,16 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
 ////////////////////////////// LCD 
 #include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>
+
 #define GFX_DEV_DEVICE ESP32_4827A043_QSPI
-  #ifdef GFX_BL
-    backlight_init(); // PWM brightness
-  #endif
+
+Arduino_DataBus *bus = new Arduino_ESP32QSPI(45 /* cs */, 47 /* sck */, 21 /* d0 */, 48 /* d1 */, 40 /* d2 */, 39 /* d3 */);
+Arduino_GFX *gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED /* RST */, 0 /* rotation */, true /* IPS */);
+
+#ifdef GFX_BL
+  backlight_init(); // PWM brightness
+#endif
+
 // Arduino_DataBus *bus = new Arduino_ESP32QSPI(45 /* cs */, 47 /* sck */, 21 /* d0 */, 48 /* d1 */, 40 /* d2 */, 39 /* d3 */);
 //Arduino_DataBus *bus = new Arduino_ESP32SPI(TFT_DC, TFT_CS, TFT_SCK /* SCK */, TFT_MOSI /* MOSI */, GFX_NOT_DEFINED /* MISO */, HSPI /* spi_num */);
 // 320x240
@@ -578,9 +584,9 @@ void loop() {
   read_touch();
 
   // CORRECTION: Vérifier si uClock tourne correctement  
-  if (!playing && uClock.state != 0) {  // CORRECTION: utiliser .state au lieu de .getMode()
-    uClock.stop();
-  }
+  // if (!playing && uClock.state != 0) {  // CORRECTION: utiliser .state au lieu de .getMode()
+  //   uClock.stop();
+  // }
   
   DO_KEYPAD();
   REFRESH_KEYS();
