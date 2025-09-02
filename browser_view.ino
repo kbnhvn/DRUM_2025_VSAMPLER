@@ -30,7 +30,6 @@ static bool fileValid[128];
 static int fileCount = 0;
 static int pageIndex = 0;
 static int selectedIndex = -1;
-static unsigned long lastPreviewTime = 0; 
 static int currentPreviewIndex = -1;     // CORRECTION: Nom différent de la fonction
 
 // CORRECTION: Affichage moderne d'une ligne de fichier

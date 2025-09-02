@@ -5,9 +5,9 @@
 
 // CORRECTION: Déclarer les pins comme variables au lieu d'utiliser les defines
 // pour éviter les conflits avec les #define dans le main
-int I2S_BCK_PIN = 9;
-int I2S_WS_PIN = 5;  
-int I2S_DATA_OUT_PIN = 14;
+int I2S_BCK_PIN = SYNTH_I2S_BCK_PIN;
+int I2S_WS_PIN = SYNTH_I2S_WS_PIN;  
+int I2S_DATA_OUT_PIN = SYNTH_I2S_DATA_OUT_PIN;
 
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
@@ -493,81 +493,4 @@ void synthESP32_setMFilter(int v){
   if (v < 0)   v = 0;
   if (v > 127) v = 127;
   master_filter = v;
-}
-
-// CORRECTION: Versions unifiées des fonctions trigger
-void synthESP32_TRIGGER(uint8_t voice){
-  if (voice >= 16) {
-    Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
-    return;
-  }
-
-  const int slot = (int)ROTvalue[voice][0];
-  if (slot < 0 || slot >= BANK_SIZE) {
-    Serial.printf("[SYNTH] Invalid slot %d for voice %d\n", slot, voice);
-    return;
-  }
-
-  const int32_t ini12 = ROTvalue[voice][1];
-  const int32_t end12 = ROTvalue[voice][2];
-  const int32_t pit   = ROTvalue[voice][3];
-  const int32_t rev   = ROTvalue[voice][4];
-
-  const int16_t* buf = SAMPLES[slot];
-  const uint64_t len = ENDS[slot] + 1;
-
-  if (!buf || len < 2) {
-    Serial.printf("[SYNTH] No sample in slot %d for voice %d\n", slot, voice);
-    return;
-  }
-
-  uint64_t start=0, end=0;
-  applyStartEndForSlot(slot, len, ini12, end12, start, end);
-
-  samplePos[voice] = (rev ? end : start) << 16;     // 16.16
-  stepSize[voice]  = makeStepSizeFromPit(pit) * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 1;
-
-  Serial.printf("[SYNTH] Triggered voice %d, slot %d, pitch %d\n", voice, slot, pit);
-}
-
-void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
-  if (voice >= 16) {
-    Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
-    return;
-  }
-  
-  if (pitch < 0 || pitch > 127) {
-    Serial.printf("[SYNTH] Invalid pitch: %d\n", pitch);
-    return;
-  }
-
-  const int slot = (int)ROTvalue[voice][0];
-  if (slot < 0 || slot >= BANK_SIZE) {
-    Serial.printf("[SYNTH] Invalid slot %d for voice %d\n", slot, voice);
-    return;
-  }
-
-  const int32_t ini12 = ROTvalue[voice][1];
-  const int32_t end12 = ROTvalue[voice][2];
-  const int32_t rev   = ROTvalue[voice][4];
-
-  const int16_t* buf = SAMPLES[slot];
-  const uint64_t len = ENDS[slot] + 1;
-
-  if (!buf || len < 2) {
-    Serial.printf("[SYNTH] No sample in slot %d for voice %d\n", slot, voice);
-    return;
-  }
-
-  uint64_t start=0, end=0;
-  applyStartEndForSlot(slot, len, ini12, end12, start, end);
-
-  uint64_t step = makeStepSizeFromPit(pitch);
-
-  samplePos[voice] = (rev ? end : start) << 16; // 16.16
-  stepSize[voice]  = step * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 1;
-  
-  Serial.printf("[SYNTH] Triggered voice %d with pitch %d (MIDI)\n", voice, pitch);
 }

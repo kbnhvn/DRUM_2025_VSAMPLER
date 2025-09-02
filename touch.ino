@@ -26,7 +26,7 @@ void handleTouchPicker(int x,int y);
 #define GT911_ADDR 0x5D
 
 void resetGT911() {
-  pinMode(TOUCH_RST, TOUCH_OUTPUT);
+  pinMode(TOUCH_RST, OUTPUT);
   pinMode(TOUCH_INT, OUTPUT);
   digitalWrite(TOUCH_INT, LOW);
   delay(5);

@@ -22,7 +22,6 @@ extern void    setSound(byte voice);
 
 // CORRECTION: Variables avec noms cohérents (éviter conflit avec fonction)
 static int currentPreviewIdx = -1;        // CORRECTION: Nom différent de la fonction
-static unsigned long lastPreviewTime = 0; // Gardé cohérent
 
 static inline int tempSlot() { return 255; } // slot tampon de preview
 

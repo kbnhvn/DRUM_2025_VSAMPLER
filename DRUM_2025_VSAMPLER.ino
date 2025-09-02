@@ -4,22 +4,22 @@
 // ZCARLOS 2025
 // V002 beta
 
-// CORRECTION: Ajouter les variables manquantes au début
-volatile byte sstep = 0;            // variable séquenceur manquante
-volatile bool refreshPATTERN = true; // variables UI manquantes  
-volatile bool refreshMODES = true;
-volatile bool refreshPADSTEP = false;
-volatile bool clearPADSTEP = false;
-
-// Variables pour sample picker manquantes
-int previewIndex = -1;
-unsigned long lastPreviewTime = 0;
-
 // includes
 #include <Arduino.h>
 #include "synth_api.h"
 #include "sd_catalog.h"
 #include "esp_task_wdt.h"
+
+// CORRECTION: Ajouter les variables manquantes au début
+volatile uint8_t sstep = 0;            // CORRECTION: uint8_t au lieu de byte
+volatile bool refreshPATTERN = true; 
+volatile bool refreshMODES = true;
+volatile bool refreshPADSTEP = false;
+volatile bool clearPADSTEP = false;
+
+// CORRECTION: Variables pour sample picker - supprimer les doublons
+int previewIndex = -1;
+unsigned long lastPreviewTime = 0;
 
 // --- Prototypes nécessaires (déclarés ailleurs) ---
 void resetGT911();
@@ -93,11 +93,11 @@ SPIClass sdSPI(HSPI); // SPI BUS for SD
   #ifdef GFX_BL
     backlight_init(); // PWM brightness
   #endif
-Arduino_DataBus *bus = new Arduino_ESP32QSPI(45 /* cs */, 47 /* sck */, 21 /* d0 */, 48 /* d1 */, 40 /* d2 */, 39 /* d3 */);
+// Arduino_DataBus *bus = new Arduino_ESP32QSPI(45 /* cs */, 47 /* sck */, 21 /* d0 */, 48 /* d1 */, 40 /* d2 */, 39 /* d3 */);
 //Arduino_DataBus *bus = new Arduino_ESP32SPI(TFT_DC, TFT_CS, TFT_SCK /* SCK */, TFT_MOSI /* MOSI */, GFX_NOT_DEFINED /* MISO */, HSPI /* spi_num */);
 // 320x240
 //Arduino_GFX *gfx = new Arduino_ST7789(bus, TFT_RST, 1 /* rotation */);
-Arduino_GFX *gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED /* RST */, 0 /* rotation */, true /* IPS */);
+// Arduino_GFX *gfx = new Arduino_NV3041A(bus, GFX_NOT_DEFINED /* RST */, 0 /* rotation */, true /* IPS */);
 #ifdef ESP32
 #undef F
 #define F(s) (s)
@@ -256,14 +256,14 @@ uint64_t stepSize[16];
 
 // I2s - CORRECTION: Définir les pins correctement
 #ifdef mylcd_type1
-  #define I2S_BCK_PIN 41
-  #define I2S_WS_PIN 2
-  #define I2S_DATA_OUT_PIN 42
+  #define SYNTH_I2S_BCK_PIN 41
+  #define SYNTH_I2S_WS_PIN 2
+  #define SYNTH_I2S_DATA_OUT_PIN 42
 #endif
 #ifdef mylcd_type2
-  #define I2S_BCK_PIN 9
-  #define I2S_WS_PIN 5
-  #define I2S_DATA_OUT_PIN 14
+  #define SYNTH_I2S_BCK_PIN 9
+  #define SYNTH_I2S_WS_PIN 5
+  #define SYNTH_I2S_DATA_OUT_PIN 14
 #endif
 #define DMA_BUF_LEN     64          
 #define DMA_NUM_BUF     8
@@ -578,7 +578,7 @@ void loop() {
   read_touch();
 
   // CORRECTION: Vérifier si uClock tourne correctement  
-  if (!playing && uClock.getMode()) {
+  if (!playing && uClock.state != 0) {  // CORRECTION: utiliser .state au lieu de .getMode()
     uClock.stop();
   }
   
