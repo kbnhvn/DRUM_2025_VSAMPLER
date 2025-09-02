@@ -17,19 +17,6 @@ static String stripExt(const String& n){
   return (d>0)? n.substring(0,d):n; 
 }
 
-// CORRECTION: Structure pour header WAV avec validation
-struct WavHeader {
-  uint16_t format;
-  uint16_t channels;
-  uint32_t sampleRate;
-  uint32_t byteRate;
-  uint16_t blockAlign;
-  uint16_t bitsPerSample;
-  uint32_t dataSize;
-  uint32_t dataOffset;
-  bool valid;
-};
-
 // CORRECTION: Parser header WAV streaming sécurisé
 static WavHeader parseWavHeader(File& f) {
   WavHeader h = {0};

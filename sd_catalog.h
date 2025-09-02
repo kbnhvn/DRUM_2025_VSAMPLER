@@ -23,3 +23,16 @@ static inline float sampleSeconds(const SampleMeta& m) {
   const float rate = (m.rate > 0) ? (float)m.rate : 44100.0f;
   return (rate > 0.f) ? (float)m.len / rate : 0.f;
 }
+
+// CORRECTION: Structure pour header WAV avec validation
+struct WavHeader {
+  uint16_t format;
+  uint16_t channels;
+  uint32_t sampleRate;
+  uint32_t byteRate;
+  uint16_t blockAlign;
+  uint16_t bitsPerSample;
+  uint32_t dataSize;
+  uint32_t dataOffset;
+  bool valid;
+};
