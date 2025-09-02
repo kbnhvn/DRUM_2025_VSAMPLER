@@ -1,3 +1,4 @@
+// ========== CORRECTIONS WIFI_FILESERVER.INO ==========
 #include <WiFi.h>
 #include <WebServer.h>
 #include <FS.h>
@@ -19,26 +20,22 @@ extern void buildCatalog();
 
 WebServer server(80);
 static bool fileserverOn = false;
-static unsigned long lastClientActivity = 0;  // NOUVEAU: Monitoring activité
-static int uploadProgress = 0;                // NOUVEAU: Progress upload
+static unsigned long lastClientActivity = 0;
+static int uploadProgress = 0;
 
 bool isFileServerOn() { return fileserverOn; }
  
-// NOUVEAU: Sécurisation noms de fichiers
-
 static String safeName(String n){
   n.replace("\\", "/"); 
   int slash = n.lastIndexOf('/'); 
   if (slash >= 0) n = n.substring(slash + 1);
   n.replace("..", "");
-  n.replace("/", "");    // NOUVEAU: Empêcher path traversal
-  n.replace("\\", "");   // NOUVEAU: Protection Windows paths
+  n.replace("/", "");
+  n.replace("\\", "");
   n.trim(); 
   
-  // NOUVEAU: Limiter longueur et caractères spéciaux
   if (n.length() > 64) n = n.substring(0, 64);
   
-  // Remplacer caractères problématiques
   n.replace(" ", "_");
   n.replace("(", "_");
   n.replace(")", "_");
@@ -61,7 +58,6 @@ static String htmlEscape(const String& s) {
   return o;
 }
 
-// NOUVEAU: Interface web moderne avec CSS
 static String getModernCSS() {
   return R"(
 <style>
@@ -93,12 +89,11 @@ body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #e0e0e0;
 void startFileServer() {
   if (fileserverOn) return;
 
-  // NOUVEAU: Page d'accueil moderne avec statistiques
   server.on("/", HTTP_GET, []() {
     lastClientActivity = millis();
     
-    // Compter les fichiers et calculer stats
-    int totalFiles = 0, totalSize = 0, validFiles = 0;    File root = SD.open("/samples");
+    // CORRECTION: Déclarer les variables localement
+    int totalFiles = 0, totalSize = 0, validFiles = 0;
     File root = SD.open("/samples");
     
     String fileListHtml = "";
@@ -114,7 +109,6 @@ void startFileServer() {
           totalFiles++;
           totalSize += size;
           
-          // Validation WAV
           bool isValid = nm.endsWith(".wav") || nm.endsWith(".WAV");
           if (isValid) validFiles++;
           
@@ -146,7 +140,6 @@ void startFileServer() {
     html += "</head><body><div class='container'>";
     html += "<div class='header'><h1>🥁 ESP32 Drum Sampler</h1><p>Sample Management Interface</p></div>";
     
-    // Stats dashboard
     html += "<div class='stats'>";
     html += "<div class='stat-card'><div class='stat-value'>" + String(totalFiles) + "</div><div>Total Files</div></div>";
     html += "<div class='stat-card'><div class='stat-value'>" + String(validFiles) + "</div><div>Valid Samples</div></div>";
@@ -154,14 +147,12 @@ void startFileServer() {
     html += "<div class='stat-card'><div class='stat-value'>" + String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)/1024) + "KB</div><div>Free RAM</div></div>";
     html += "</div>";
     
-    // Upload area
     html += "<div class='card'><h3>Upload Samples</h3>";
     html += "<form method='POST' action='/up' enctype='multipart/form-data'>";
     html += "<div class='upload-area' ondrop='dropHandler(event)' ondragover='dragOverHandler(event)'>";
     html += "📁 Drag & drop WAV files here or <input type='file' name='file' accept='.wav,.WAV' multiple style='display:inline'>";
     html += "</div><button type='submit' class='btn btn-primary'>Upload</button></form></div>";
     
-    // File management
     html += "<div class='card'><h3>Sample Library</h3>";
     if (totalFiles > 0) {
       html += "<div class='file-list'>" + fileListHtml + "</div>";
@@ -170,7 +161,6 @@ void startFileServer() {
     }
     html += "</div>";
     
-    // Tools
     html += "<div class='card'><h3>Tools</h3>";
     html += "<form method='POST' action='/rn' style='margin-bottom:15px'>";
     html += "Rename: <input name='old' placeholder='old name' style='margin:0 10px'>";
@@ -179,7 +169,6 @@ void startFileServer() {
     html += "<a href='/rescan' class='btn btn-primary'>🔄 Rescan Library</a>";
     html += "</div>";
     
-    // JavaScript pour drag & drop
     html += "<script>";
     html += "function dragOverHandler(ev) { ev.preventDefault(); ev.target.classList.add('dragover'); }";
     html += "function dropHandler(ev) { ev.preventDefault(); ev.target.classList.remove('dragover'); }";
@@ -189,7 +178,6 @@ void startFileServer() {
     server.send(200, "text/html", html);  
   });
 
-  // NOUVEAU: Download avec logging
   server.on("/dl", HTTP_GET, []() {
     lastClientActivity = millis();
     String f = safeName(server.arg("f"));
@@ -204,7 +192,6 @@ void startFileServer() {
     file.close();
   });
 
-  // NOUVEAU: Delete avec confirmation et logging  
   server.on("/rm", HTTP_GET, []() {
     lastClientActivity = millis();
     String f = safeName(server.arg("f"));
@@ -226,7 +213,6 @@ void startFileServer() {
     }
   });
 
-  // NOUVEAU: Rename avec validation
   server.on("/rn", HTTP_POST, []() {
     lastClientActivity = millis();
     String o = safeName(server.arg("old"));
@@ -262,11 +248,9 @@ void startFileServer() {
     server.send(302);
   });
 
-  // NOUVEAU: Upload avec progress et validation
   const size_t MAX_UPLOAD = 50UL * 1024UL * 1024UL; // 50 MB
   server.on("/up", HTTP_POST,
     []() { 
-      // Réponse avec feedback
       String html = "<!DOCTYPE html><html><head>" + getModernCSS() + "</head><body>";
       html += "<div class='container'><div class='card'>";
       html += "<h3>Upload Complete!</h3>";
@@ -289,7 +273,6 @@ void startFileServer() {
           return;
         }
         
-        // Vérifier extension
         if (!finalName.endsWith(".wav") && !finalName.endsWith(".WAV")) {
           Serial.printf("[WEB] Upload rejected - not WAV: %s\n", finalName.c_str());
           return;
@@ -316,7 +299,6 @@ void startFileServer() {
           totalUploaded += up.currentSize;
           uploadProgress = (totalUploaded * 100) / MAX_UPLOAD;
           
-          // Log progress chaque 100KB
           if (totalUploaded % (100 * 1024) == 0) {
             Serial.printf("[WEB] Upload progress: %u KB\n", totalUploaded / 1024);
           }
@@ -339,7 +321,6 @@ void startFileServer() {
     }
   );
 
-  // NOUVEAU: Rescan avec feedback
   server.on("/rescan", HTTP_GET, []() { 
     lastClientActivity = millis();
     Serial.println("[WEB] Catalog rescan requested");
@@ -348,7 +329,6 @@ void startFileServer() {
     server.send(302); 
   });
   
-  // NOUVEAU: API status pour monitoring
   server.on("/api/status", HTTP_GET, []() {
     lastClientActivity = millis();
     String json = "{";
@@ -356,7 +336,6 @@ void startFileServer() {
     json += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
     json += "\"spiram_free\":" + String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)) + ",";
     json += "\"wifi_rssi\":" + String(WiFi.RSSI()) + ",";
-    json += "\"files_count\":" + String(totalFiles) + ",";
     json += "\"last_activity\":" + String(lastClientActivity);
     json += "}";
     server.send(200, "application/json", json);
@@ -366,7 +345,7 @@ void startFileServer() {
   fileserverOn = true;
   lastClientActivity = millis();
   Serial.println("[WEB] File server started with modern interface");
- }
+}
 
 void stopFileServer() { 
   if (!fileserverOn) return; 
@@ -378,23 +357,15 @@ void stopFileServer() {
 void loopWeb() { 
   if (fileserverOn) {
     server.handleClient(); 
-    
-    // NOUVEAU: Auto-stop après inactivité (optionnel)
-    // if (millis() - lastClientActivity > 3600000) { // 1 heure
-    //   Serial.println("[WEB] Auto-stopping server after inactivity");
-    //   stopFileServer();
-    // }
   }
 }
 
-// NOUVEAU: Connexion WiFi avec retry et feedback
 static void _wifiConnect(const char* ssid, const char* psk) {
   WiFi.disconnect(true, true); 
   WiFi.mode(WIFI_STA); 
   WiFi.begin(ssid, psk);
   Serial.print("WiFi connecting...");
   
-  // Attente avec timeout
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 20) {
     delay(500);

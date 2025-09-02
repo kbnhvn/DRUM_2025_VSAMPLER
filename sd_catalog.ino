@@ -17,7 +17,7 @@ static String stripExt(const String& n){
   return (d>0)? n.substring(0,d):n; 
 }
 
-// NOUVEAU: Structure pour header WAV avec validation
+// CORRECTION: Structure pour header WAV avec validation
 struct WavHeader {
   uint16_t format;
   uint16_t channels;
@@ -30,7 +30,7 @@ struct WavHeader {
   bool valid;
 };
 
-// NOUVEAU: Parser header WAV streaming sécurisé
+// CORRECTION: Parser header WAV streaming sécurisé
 static WavHeader parseWavHeader(File& f) {
   WavHeader h = {0};
   h.valid = false;
@@ -139,7 +139,8 @@ static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
   if (h.channels == 1) {
     // Mono direct par chunks
     while (samplesRead < totalSamples) {
-      uint32_t toRead = min(CHUNK_SIZE / 2, totalSamples - samplesRead);
+      // CORRECTION: Harmonisation des types uint32_t
+      uint32_t toRead = min((uint32_t)(CHUNK_SIZE / 2), totalSamples - samplesRead);
       size_t bytesRead = f.read((uint8_t*)(buffer + samplesRead), toRead * 2);
       
       if (bytesRead != toRead * 2) {
@@ -160,7 +161,8 @@ static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
   } else {
     // Stéréo -> mono avec mixdown
     while (samplesRead < totalSamples) {
-      uint32_t toRead = min(CHUNK_SIZE / 4, totalSamples - samplesRead);
+      // CORRECTION: Harmonisation des types uint32_t
+      uint32_t toRead = min((uint32_t)(CHUNK_SIZE / 4), totalSamples - samplesRead);
       
       for (uint32_t i = 0; i < toRead; i++) {
         int16_t L, R;
@@ -197,7 +199,7 @@ static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
   return true;
 }
 
-// NOUVEAU: Validation rapide sans chargement complet
+// CORRECTION: Validation rapide sans chargement complet
 bool validateWavFile(const char* path, float* duration, uint32_t* sampleRate) {
   File f = SD.open(path, FILE_READ);
   if (!f) return false;
@@ -214,7 +216,6 @@ bool validateWavFile(const char* path, float* duration, uint32_t* sampleRate) {
   }
   
   return h.valid;
- }
 }
 
 static void scanDir(const String& d){
@@ -232,8 +233,7 @@ static void scanDir(const String& d){
       m.path = d + "/" + nm; 
       m.name = stripExt(nm);
 
-      
-      // NOUVEAU: Validation et métadonnées à la volée
+      // Validation et métadonnées à la volée
       float dur = 0;
       uint32_t rate = 0;
       if (validateWavFile(m.path.c_str(), &dur, &rate)) {
@@ -245,6 +245,7 @@ static void scanDir(const String& d){
   }
 }
 
+// CORRECTION: Fermer la fonction initSD proprement
 void initSD(){
   if (!SD.begin()) { 
     Serial.println("[SD] init failed"); 
@@ -255,6 +256,7 @@ void initSD(){
     Serial.println("[SD] Created /samples directory");
   }
   Serial.println("[SD] Initialized successfully");
+} // CORRECTION: Accolade fermante ajoutée
 
 void buildCatalog(){
   CATALOG.clear();
@@ -271,7 +273,7 @@ void buildCatalog(){
   }
 }
 
-// CORRECTION: Fonction incomplète - manquait return true à la fin
+// CORRECTION: Fonction complète avec return
 bool assignSampleToSlot(int catIndex, int slot){
   if (slot < 0 || slot >= BANK_SIZE) {
     Serial.printf("[CATALOG] Invalid slot: %d\n", slot);
@@ -282,7 +284,7 @@ bool assignSampleToSlot(int catIndex, int slot){
     return false;
   }
   
-  // NOUVEAU: Libération mémoire sécurisée AVANT allocation
+  // Libération mémoire sécurisée AVANT allocation
   if (SAMPLES[slot]) {
     Serial.printf("[CATALOG] Freeing slot %d (%u bytes)\n", 
                   slot, (unsigned)(ENDS[slot] * sizeof(int16_t)));

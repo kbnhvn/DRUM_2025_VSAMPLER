@@ -11,13 +11,14 @@ extern uint16_t pattern[16];
 extern int32_t  ROTvalue[16][8];
 extern String   sound_names[];
 extern View     currentView;
+extern int      bpm;
 
-// NOUVEAU: Variables pour liste des patterns
+// Variables pour liste des patterns
 static String patternList[32];
 static int patternCount = 0;
 static int selectedPatternFile = -1;
 
-// NOUVEAU: Scanner les patterns existants
+// Scanner les patterns existants
 static void scanPatterns() {
   patternCount = 0;
   if (!SD.exists("/patterns")) return;
@@ -42,7 +43,7 @@ static void scanPatterns() {
   Serial.printf("[PATTERN] Found %d pattern files\n", patternCount);
 }
 
-// NOUVEAU: Affichage moderne avec preview du pattern actuel
+// Affichage moderne avec preview du pattern actuel
 static void drawPatternPreview() {
   // Zone preview moderne
   gfx->fillRect(300, 70, 170, 120, RGB565(25, 30, 40));
@@ -83,57 +84,113 @@ static int nextPatternNum(){
   if (!SD.exists("/patterns")) SD.mkdir("/patterns");
   File dir=SD.open("/patterns"); if (!dir) return 1;
   int maxN=0; while(true){ File f=dir.openNextFile(); if(!f) break;
-    String nm=f.name(); if (nm.startsWith("/patterns/pattern_") && nm.endsWith(".json")){
-      // CORRECTION: Extraction correcte du numéro
+    String nm=f.name(); if (nm.startsWith("pattern_") && nm.endsWith(".json")){
+      // Extraction correcte du numéro
       int startIdx = nm.lastIndexOf("_") + 1;
       int endIdx = nm.lastIndexOf(".");
       int n = nm.substring(startIdx, endIdx).toInt(); 
       if (n > maxN) maxN = n;
     } f.close();
-  } return maxN+1;
+  } 
+  dir.close();
+  return maxN+1;
 }
 
+// CORRECTION: Une seule fonction pattern_save_json
 static void pattern_save_json(){
   if (!SD.exists("/patterns")) SD.mkdir("/patterns");
+  
+  int patNum = nextPatternNum();
   String tmp = "/patterns/.tmp.json";
-  String fin = "/patterns/pattern_"+String(nextPatternNum())+".json";
-  File f=SD.open(tmp, FILE_WRITE); if (!f) return;
+  String fin = "/patterns/pattern_" + String(patNum) + ".json";
+  
+  File f = SD.open(tmp, FILE_WRITE); 
+  if (!f) {
+    Serial.println("[PATTERN] Save failed - cannot create file");
+    return;
+  }
 
   DynamicJsonDocument doc(16384);
+  
+  // Métadonnées étendues
+  doc["version"] = 2;
+  doc["created"] = millis(); // Timestamp relatif
+  doc["bpm"] = bpm;
+  // doc["firstStep"] = firstStep; // Si disponible
+  // doc["lastStep"] = lastStep;   // Si disponible
+  
+  // Pattern complet avec noms de samples
   auto pads = doc.createNestedArray("pads");
-  for(int s=0;s<16;s++){
+  for(int s = 0; s < 16; s++){
     auto po = pads.createNestedObject();
-    po["name"]=sound_names[s];
-    // params inline
-    {
-      auto pa = po.createNestedObject("params");
-      pa["SAM"]=ROTvalue[s][0];
-      pa["INI"]=ROTvalue[s][1];
-      pa["END"]=ROTvalue[s][2];
-      pa["PIT"]=ROTvalue[s][3];
-      pa["RVS"]=ROTvalue[s][4];
-      pa["VOL"]=ROTvalue[s][5];
-      pa["PAN"]=ROTvalue[s][6];
-      pa["FIL"]=ROTvalue[s][7];
+    po["id"] = s;
+    po["sample"] = sound_names[s];
+    
+    // Paramètres audio inline
+    auto pa = po.createNestedObject("params");
+    pa["SAM"] = ROTvalue[s][0]; pa["INI"] = ROTvalue[s][1];
+    pa["END"] = ROTvalue[s][2]; pa["PIT"] = ROTvalue[s][3];
+    pa["RVS"] = ROTvalue[s][4]; pa["VOL"] = ROTvalue[s][5];
+    pa["PAN"] = ROTvalue[s][6]; pa["FIL"] = ROTvalue[s][7];
+    
+    // Steps avec format compact
+    auto steps = po.createNestedArray("steps");
+    for(int st = 0; st < 16; st++) {
+      steps.add((pattern[s] >> st) & 0x1);
     }
-    // steps inline
-    auto steps=po.createNestedArray("pattern");
-    for(int st=0;st<16;st++) steps.add( (pattern[s] >> st) & 0x1 );
   }
-  serializeJson(doc,f); f.close(); SD.rename(tmp, fin);
+  
+  if (serializeJson(doc, f) == 0) {
+    Serial.println("[PATTERN] JSON serialization failed");
+    f.close();
+    SD.remove(tmp);
+    return;
+  }
+  
+  f.close(); 
+  
+  if (!SD.rename(tmp, fin)) {
+    Serial.println("[PATTERN] Rename failed");
+    SD.remove(tmp);
+    return;
+  }
+  
+  Serial.printf("[PATTERN] Saved successfully as %s\n", fin.c_str());
 }
 
-static void pattern_new(){ for(int s=0;s<16;s++) pattern[s]=0; }
+// CORRECTION: Une seule fonction pattern_new
+static void pattern_new() { 
+  // Animation de clear
+  for (int s = 0; s < 16; s++) {
+    pattern[s] = 0;
+    // Petit délai pour effet visuel
+    if (s % 4 == 0) delay(50);
+  }
+  
+  Serial.println("[PATTERN] New pattern created");
+}
 
 static bool pattern_load_first(){
-  File dir=SD.open("/patterns"); if (!dir) return false;
-  File f=dir.openNextFile(); if (!f) return false;
+  File dir=SD.open("/patterns"); 
+  if (!dir) return false;
+  
+  File f=dir.openNextFile(); 
+  if (!f) {
+    dir.close();
+    return false;
+  }
+  
   DynamicJsonDocument doc(16384);
-  if (deserializeJson(doc,f)) { f.close(); return false; }
+  if (deserializeJson(doc,f)) { 
+    f.close(); 
+    dir.close();
+    return false; 
+  }
+  
   auto pads = doc["pads"].as<ArduinoJson::JsonArray>();
   for(int s=0;s<min(16,(int)pads.size());s++){
     auto po=pads[s].as<ArduinoJson::JsonObject>();
-    sound_names[s]=po["name"].as<String>();
+    sound_names[s]=po["sample"].as<String>();
     // read params inline
     if (po.containsKey("params")){
       auto pa = po["params"].as<ArduinoJson::JsonObject>();
@@ -152,10 +209,17 @@ static bool pattern_load_first(){
       auto steps=po["pattern"].as<ArduinoJson::JsonArray>();
       int n = min(16, (int)steps.size());
       for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
+    } else if (po.containsKey("steps")) {
+      // Support nouveau format
+      auto steps=po["steps"].as<ArduinoJson::JsonArray>();
+      int n = min(16, (int)steps.size());
+      for (int st=0; st<n; ++st) if (steps[st].as<int>()) m |= (1<<st);
     }
     pattern[s]=m;
   }
-  f.close(); return true;
+  f.close(); 
+  dir.close();
+  return true;
 }
 
 void openPatternView(){
@@ -217,7 +281,7 @@ void openPatternView(){
 void handleTouchPattern(int x,int y){
   Serial.printf("[PATTERN] Touch at x=%d, y=%d\n", x, y);
   
-  // NOUVEAU: Boutons avec animations et feedback amélioré
+  // Boutons avec animations et feedback amélioré
   // Save Pattern
   if (y >= 70 && y <= 130 && x >= 20 && x <= 140) {
       drawModernButton(20, 70, 120, 60, UI_SUCCESS, "SAVE\nPATTERN", true, true);
@@ -277,7 +341,7 @@ void handleTouchPattern(int x,int y){
       return; 
   }
   
-  // NOUVEAU: Back avec transition moderne
+  // Back avec transition moderne
   if (y >= 5 && y <= 30 && x >= 400 && x <= 470) {  
     Serial.println("[PATTERN] BACK to main");
     
@@ -295,78 +359,4 @@ void handleTouchPattern(int x,int y){
   }
   
   Serial.printf("[PATTERN] Touch ignored at x=%d, y=%d\n", x, y);
-}
-
-// NOUVEAU: Fonction améliorée pour créer pattern vide avec options
-static void pattern_new() { 
-  // Animation de clear
-  for (int s = 0; s < 16; s++) {
-    pattern[s] = 0;
-    // Petit délai pour effet visuel
-    if (s % 4 == 0) delay(50);
-  }
-  
-  Serial.println("[PATTERN] New pattern created");
-}
-
-// NOUVEAU: Sauvegarde avec métadonnées étendues
-static void pattern_save_json(){
-  if (!SD.exists("/patterns")) SD.mkdir("/patterns");
-  
-  int patNum = nextPatternNum();
-  String tmp = "/patterns/.tmp.json";
-  String fin = "/patterns/pattern_" + String(patNum) + ".json";
-  
-  File f = SD.open(tmp, FILE_WRITE); 
-  if (!f) {
-    Serial.println("[PATTERN] Save failed - cannot create file");
-    return;
-  }
-
-  DynamicJsonDocument doc(16384);
-  
-  // Métadonnées étendues
-  doc["version"] = 2;
-  doc["created"] = millis(); // Timestamp relatif
-  doc["bpm"] = bpm;
-  doc["firstStep"] = firstStep;
-  doc["lastStep"] = lastStep;
-  
-  // Pattern complet avec noms de samples
-  auto pads = doc.createNestedArray("pads");
-  for(int s = 0; s < 16; s++){
-    auto po = pads.createNestedObject();
-    po["id"] = s;
-    po["sample"] = sound_names[s];
-    
-    // Paramètres audio inline
-    auto pa = po.createNestedObject("params");
-    pa["SAM"] = ROTvalue[s][0]; pa["INI"] = ROTvalue[s][1];
-    pa["END"] = ROTvalue[s][2]; pa["PIT"] = ROTvalue[s][3];
-    pa["RVS"] = ROTvalue[s][4]; pa["VOL"] = ROTvalue[s][5];
-    pa["PAN"] = ROTvalue[s][6]; pa["FIL"] = ROTvalue[s][7];
-    
-    // Steps avec format compact
-    auto steps = po.createNestedArray("steps");
-    for(int st = 0; st < 16; st++) {
-      steps.add((pattern[s] >> st) & 0x1);
-    }
-  }
-  
-  if (serializeJson(doc, f) == 0) {
-    Serial.println("[PATTERN] JSON serialization failed");
-    f.close();
-    SD.remove(tmp);
-    return;
-  }
-  
-  f.close(); 
-  
-  if (!SD.rename(tmp, fin)) {
-    Serial.println("[PATTERN] Rename failed");
-    SD.remove(tmp);
-    return;
-  }
-  
-  Serial.printf("[PATTERN] Saved successfully as %s\n", fin.c_str());
 }

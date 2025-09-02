@@ -4,7 +4,16 @@
 // ZCARLOS 2025
 // V002 beta
 
-// Lots of bugs
+// CORRECTION: Ajouter les variables manquantes au début
+volatile byte sstep = 0;            // variable séquenceur manquante
+volatile bool refreshPATTERN = true; // variables UI manquantes  
+volatile bool refreshMODES = true;
+volatile bool refreshPADSTEP = false;
+volatile bool clearPADSTEP = false;
+
+// Variables pour sample picker manquantes
+int previewIndex = -1;
+unsigned long lastPreviewTime = 0;
 
 // includes
 #include <Arduino.h>
@@ -19,6 +28,10 @@ void setSound(byte voice);
 void select_rot();
 void onSync24Callback(uint32_t tick); // callback uClock
 
+// CORRECTION: Ajouter les prototypes manquants
+void drawBar(byte bar);
+void openSamplePicker();
+
 // --- Runtime samples from SD ---
 #ifndef USE_SD_SAMPLES
   #define USE_SD_SAMPLES 1
@@ -31,6 +44,7 @@ void openSongView();
 void openBrowserView();
 void loopWeb();
 void backlight_init();
+void stopWiFiAutoReconnect(); // CORRECTION: Ajouter prototype manquant
 
 //#define TESTING 1
 
@@ -240,11 +254,7 @@ byte latch[16];
 uint64_t samplePos[16];
 uint64_t stepSize[16];
 
-// I2s
-
-// #define I2S_BCK_PIN 7
-// #define I2S_WS_PIN 16 
-// #define I2S_DATA_OUT_PIN 15
+// I2s - CORRECTION: Définir les pins correctement
 #ifdef mylcd_type1
   #define I2S_BCK_PIN 41
   #define I2S_WS_PIN 2
@@ -289,7 +299,6 @@ int octave=5;
 int bpm=120;
 byte selected_pattern=0;
 byte s_old_selected_pattern=255;
-volatile byte sstep=0;            // volatile car modifié dans ISR
 int s_old_sstep=-1;
 volatile bool load_flag=false;    // volatile car modifié dans ISR
 
@@ -412,99 +421,11 @@ bool songing     = false; // switch to make load auto patterns++
 bool recording   = false;
 bool shifting    = false;
 
-volatile bool clearPADSTEP=false;   // volatile car modifié dans ISR
 bool clearPATTERNPADS=false;
-volatile bool refreshPATTERN=true;  // volatile car modifié dans ISR
-volatile bool refreshPADSTEP=false;
-bool refreshMODES=true;
-//bool refreshPADTOUCHED=false;
 
 #define MIDI_CLOCK 0xF8
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
-
-
-
-// ////////////////////////////////////////////////////////////////////////////////////////////
-// //                                       I S R / SEQUENCER
-// ////////////////////////////////////////////////////////////////////////////////////////////
-// #include "driver/timer.h"
-// #define TIMER_DIVIDER         80  // 80MHz / 80 = 1MHz -> 1 tick = 1us
-// #define TIMER_SCALE           (1000000)  // para pasar a segundos
-// #define TIMER_GROUP           TIMER_GROUP_0
-// #define TIMER_INDEX           TIMER_0
-// volatile bool timerFired = false;
-// void (*onSync24Callback)() = nullptr;  // callback a ejecutar en cada tick
-// uint16_t tick=0;
-
-// void IRAM_ATTR onTimer(void *arg) {
-//   if (onSync24Callback != nullptr) {
-//     onSync24Callback();
-//   }
-//   // Limpiar interrupción
-//   timer_group_clr_intr_status_in_isr(TIMER_GROUP, TIMER_INDEX);
-//   // Volver a habilitar la interrupción
-//   timer_group_enable_alarm_in_isr(TIMER_GROUP, TIMER_INDEX);
-// }
-
-// void IRAM_ATTR tic(){  
-//   if (sstep==firstStep){
-//     sync_flag=true;
-//   }  
-//   for (int f = 0; f < 16; f++) { 
-//     if (!bitRead(mutes, f)) {
-//       if (solos == 0 || (solos > 0 && bitRead(solos, f))) {
-//         if (bitRead(pattern[f], sstep)) { // note on
-//           latch[f]=0;        
-//           if (bitRead(isMelodic,f)){
-//             synthESP32_TRIGGER_P(f,melodic[f][sstep]);
-//           } else {
-//             // Trigger con el pitch del canal
-//             synthESP32_TRIGGER(f);
-//           }
-//         } 
-//       }
-//     }
-//   }
-
-//   sstep++;
-//   // Comprobar step final
-//   if (sstep==(lastStep+1) || sstep==(newLastStep+1) || sstep==16) {
-//     lastStep=newLastStep;
-//     sstep=firstStep;
-//     if (songing){
-//       load_flag=true; // inside loop I will load next pattern
-//     }
-//   }
-//   refreshPADSTEP=true;
-// }
-
-// void IRAM_ATTR onSync24() {
-//   // FX1
-//   if (playing){
-//     if (!(tick % (12)) && fx1==1) {
-//       synthESP32_TRIGGER(selected_sound);
-//     }
-//     if (!(tick % (6)) && fx1==2) {
-//       synthESP32_TRIGGER(selected_sound);
-//     }
-//     if (!(tick % (3)) && fx1==3) {
-//       synthESP32_TRIGGER(selected_sound);
-//     }
-//   }
-  
-//   // Lanzar cambio de step
-//   if (!(tick % (6))) tic();
-
-//   // Limpiar marcas de sound y step
-//   if ((tick % (6))==4) clearPADSTEP=true;
-//   tick++;
-//   if (tick==24) tick=0;
-// }
-
-////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////  S E T U P  //////////////////////////////
 void setup() {
@@ -656,8 +577,8 @@ void loop() {
 
   read_touch();
 
-  // CORRECTION: Vérifier si uClock tourne mais que playing=false (désync)
-  if (!playing && uClock.isRunning()) {
+  // CORRECTION: Vérifier si uClock tourne correctement  
+  if (!playing && uClock.getMode()) {
     uClock.stop();
   }
   
@@ -680,6 +601,3 @@ void loop() {
     } 
   }
 }
-
-
-

@@ -2,7 +2,12 @@
 #include <Arduino.h>
 #include "driver/i2s.h"
 #include "config_pins.h"
-extern int I2S_BCK_PIN, I2S_WS_PIN, I2S_DATA_OUT_PIN;
+
+// CORRECTION: Déclarer les pins comme variables au lieu d'utiliser les defines
+// pour éviter les conflits avec les #define dans le main
+int I2S_BCK_PIN = 9;
+int I2S_WS_PIN = 5;  
+int I2S_DATA_OUT_PIN = 14;
 
 // Tabla de frecuencias MIDI (0-127)
 const float midiFrequencies[128] = {
@@ -127,20 +132,10 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
     // Aplicar soft clipping
     DRUMTOTAL_L = soft_clip(DRUMTOTAL_L);
     DRUMTOTAL_R = soft_clip(DRUMTOTAL_R);
-    // if (DRUMTOTAL_L > INT16_MAX) DRUMTOTAL_L = INT16_MAX;
-    // if (DRUMTOTAL_L < INT16_MIN) DRUMTOTAL_L = INT16_MIN;
-    // if (DRUMTOTAL_R > INT16_MAX) DRUMTOTAL_R = INT16_MAX;
-    // if (DRUMTOTAL_R < INT16_MIN) DRUMTOTAL_R = INT16_MIN;
 
     // Filtro master
     int16_t DRUMTOTAL_L_OUT = FILTROS[16].next(DRUMTOTAL_L);
     int16_t DRUMTOTAL_R_OUT = FILTROS[17].next(DRUMTOTAL_R);
-
-    // // Asegurar que no se sobrepase el rango permitido.
-    // if (DRUMTOTAL_L_OUT > INT16_MAX) DRUMTOTAL_L_OUT = INT16_MAX;
-    // if (DRUMTOTAL_L_OUT < INT16_MIN) DRUMTOTAL_L_OUT = INT16_MIN;
-    // if (DRUMTOTAL_R_OUT > INT16_MAX) DRUMTOTAL_R_OUT = INT16_MAX;
-    // if (DRUMTOTAL_R_OUT < INT16_MIN) DRUMTOTAL_R_OUT = INT16_MIN;
 
      // Ajuste de volumen master
     DRUMTOTAL_L_OUT = (DRUMTOTAL_L_OUT * mvol) >> 8;
@@ -148,12 +143,6 @@ for (int i = 0; i < DMA_BUF_LEN; i++) {
 
     DRUMTOTAL_L_OUT = soft_clip(DRUMTOTAL_L_OUT);
     DRUMTOTAL_R_OUT = soft_clip(DRUMTOTAL_R_OUT);
-
-    // // Asegurar que no se sobrepase el rango permitido.
-    // if (DRUMTOTAL_L_OUT > INT16_MAX) DRUMTOTAL_L_OUT = INT16_MAX;
-    // if (DRUMTOTAL_L_OUT < INT16_MIN) DRUMTOTAL_L_OUT = INT16_MIN;
-    // if (DRUMTOTAL_R_OUT > INT16_MAX) DRUMTOTAL_R_OUT = INT16_MAX;
-    // if (DRUMTOTAL_R_OUT < INT16_MIN) DRUMTOTAL_R_OUT = INT16_MIN;
 
     // Almacenar en el buffer de salida
     out_buf[i * 2]     = (uint16_t)DRUMTOTAL_L_OUT;  
@@ -224,14 +213,6 @@ void synthESP32_setFilter(unsigned char voice, unsigned char freq)  {
 
 void synthESP32_setVol(unsigned char voice,unsigned char vol) {
   synthESP32_updateVolPan(voice);
-	// VOL_L[voice]=vol;
-  // VOL_R[voice]=vol;  
-  // if (PAN[voice]>0){
-  //   VOL_L[voice]=VOL_R[voice]-((VOL_R[voice]*PAN[voice])>>7);
-  // }
-  // if (PAN[voice]<0){
-	//   VOL_R[voice]=VOL_L[voice]+((VOL_L[voice]*PAN[voice])>>7);
-  // }	
 }
 
 //*********************************************************************
@@ -240,14 +221,8 @@ void synthESP32_setVol(unsigned char voice,unsigned char vol) {
 
 void synthESP32_setPan(unsigned char voice,signed char pan) {
   synthESP32_updateVolPan(voice);
-  // PAN[voice]=pan;
-  // if (PAN[voice]>0){
-  //   VOL_L[voice]=VOL_R[voice]-((VOL_R[voice]*PAN[voice])>>7);
-  // }
-  // if (PAN[voice]<0){
-	//   VOL_R[voice]=VOL_L[voice]+((VOL_L[voice]*PAN[voice])>>7);
-  // }	
 }
+
 //*********************************************************************
 //  Update vol and pan
 //*********************************************************************
@@ -267,9 +242,10 @@ void synthESP32_updateVolPan(unsigned char voice) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void synthESP32_TRIGGER(int nkey){
+// CORRECTION: Harmoniser le type avec synth_api.h (uint8_t au lieu d'int)
+void synthESP32_TRIGGER(uint8_t nkey){
 
-  if (nkey < 0) return;
+  if (nkey >= 16) return;
 
   if (ROTvalue[nkey][4]==1) {
     samplePos[nkey] = ((uint64_t)NEWENDS[ROTvalue[nkey][0]]) << 16; // reinicia desde newinis
@@ -282,9 +258,10 @@ void synthESP32_TRIGGER(int nkey){
   latch[nkey] = 1;
 }
 
-void synthESP32_TRIGGER_P(int nkey, int ppitch){
+// CORRECTION: Harmoniser le type avec synth_api.h (uint8_t au lieu d'int)
+void synthESP32_TRIGGER_P(uint8_t nkey, int ppitch){
 
-  if (nkey < 0) return; 
+  if (nkey >= 16) return; 
   
   if (ROTvalue[nkey][4]==1) {
     samplePos[nkey] = ((uint64_t)NEWENDS[ROTvalue[nkey][0]]) << 16; // reinicia desde newinis
@@ -303,8 +280,6 @@ void setSound(byte f){
   synthESP32_setIni(f,ROTvalue[f][1]);  
   synthESP32_setEnd(f,ROTvalue[f][2]);
   synthESP32_updateVolPan(f);  
-  // synthESP32_setVol(f,ROTvalue[f][5]);  
-  // synthESP32_setPan(f,ROTvalue[f][6]);  
   synthESP32_setFilter(f,ROTvalue[f][7]);
 }
 
@@ -379,8 +354,6 @@ void setRandomPitch(byte f){
   }  
 }
 
-
-
 void setRandomNotes(byte f){
   setRandomPitch(f);
 }    
@@ -401,7 +374,17 @@ extern LowPassFilter FILTROS[18];    // si tes filtres master L/R = index 16/17
 extern const int cutoff;             // bornes pour setCutoff éventuel
 extern const int reso;               // etc.
 
-// NOUVEAU: Switch audio HP/DAC
+// Variables supplémentaires nécessaires
+extern uint16_t pattern[16];
+extern uint8_t melodic[16][16]; 
+extern const uint8_t escalas[13][8];
+extern uint8_t selected_scale;
+extern byte selected_sound;
+extern const int min_values[16];
+extern const int max_values[16];
+extern String sound_names[BANK_SIZE];
+
+// Switch audio HP/DAC
 static bool currentUseDAC = false;
 
 void switchAudioOutput(bool useDAC) {
@@ -459,79 +442,60 @@ void switchAudioOutput(bool useDAC) {
   Serial.println("[AUDIO] Audio output switched successfully");
 }
 
-// ===== helpers internes (safe/robustes) =====
+// helpers internes (safe/robustes) - VERSIONS SIMPLIFIÉES
 
 static inline uint64_t clampU64(uint64_t v, uint64_t lo, uint64_t hi){
   return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
-// Mappe 0..2047 -> 0..len-1 (version 64-bit ; __uint128_t indisponible sur Xtensa)
 static inline uint64_t map12b_to_index(int32_t val12, uint64_t len){
   if (val12 < 0)    val12 = 0;
   if (val12 > 2047) val12 = 2047;
   const uint64_t L = (len > 0) ? (len - 1) : 0;
-  // Produit max ≈ 2047 * L ; pour des samples audio (quelques M échantillons), ça tient large en 64-bit.
   return ((uint64_t)val12 * L) / 2047u;
 }
 
-// Calcule un stepSize « pitch » simple (% sample rate), robuste sans table
-// PIT (0..127) -> -24..+24 demi-tons (exemple), factor = 2^(semitones/12)
 static inline uint64_t makeStepSizeFromPit(int32_t pit){
-  int semitones = (int)((pit - 64) * 24 / 64);   // pit=64 => 0, extrêmes ~±24
-  // facteur 2^(n/12) approximé sans double lourd
-  // on utilise un approximant : factor ≈ powf(2.0f, semitones/12.0f)
-  // Pour rester ultra-portable, on fait un ladder simple :
+  int semitones = (int)((pit - 64) * 24 / 64);   
   float factor = 1.0f;
-  if (semitones > 0) { while (semitones--) factor *= 1.059463094f; }
-  else if (semitones < 0) { while (semitones++) factor /= 1.059463094f; }
+  if (semitones > 0) { 
+    while (semitones--) factor *= 1.059463094f; 
+  } else if (semitones < 0) { 
+    while (semitones++) factor /= 1.059463094f; 
+  }
 
-  // stepSize=1 => lecture native ; sinon on accélère/ralentit
-  // On encode en 16.16 pour limiter le coût (si ton mixer attend autre chose, adapte)
   uint64_t stepFixed1616 = (uint64_t)(factor * 65536.0f);
   if (stepFixed1616 < 1) stepFixed1616 = 1;
   return stepFixed1616;
 }
 
-// bornage des bornes INI/END et écriture dans NEWINIS/NEWENDS pour le slot
 static void applyStartEndForSlot(int slot, uint64_t len, int32_t ini12, int32_t end12,
                                  uint64_t& outStart, uint64_t& outEnd){
   uint64_t s = map12b_to_index(ini12, len);
   uint64_t e = map12b_to_index(end12, len);
   if (e <= s) e = (s + 1 <= (len? len-1 : 1)) ? (s + 1) : (len? len-1 : 1);
   outStart = s; outEnd = e;
-  // garde les bornes côté global (utilisées par l’UI, waveform, etc.)
   if (slot >= 0) {
     NEWINIS[slot] = s;
     NEWENDS[slot] = e;
   }
 }
 
-// ==== Implémentations API publiques ====
+// Implémentations API publiques
 
-// Volume maître (UI et moteur)
 void synthESP32_setMVol(int v){
   if (v < 0)   v = 0;
   if (v > 127) v = 127;
   master_vol = v;
-  // Si ton mixeur utilise une échelle interne (ex: 0..21 ou 0..127), mets-la à jour ici :
-  // mvol = map(master_vol, 0, 127, 0, 21);  // si utile dans ton moteur
 }
 
-// Filtre maître (UI et moteur)
 void synthESP32_setMFilter(int v){
   if (v < 0)   v = 0;
   if (v > 127) v = 127;
   master_filter = v;
-
-  // Si tu appliques réellement un filtre master L/R dans ton audio_task,
-  // tu peux synchroniser ici un cutoff en fonction de v (ex: 80..12000 Hz).
-  // Exemple (à ajuster selon ta classe LowPassFilter) :
-  // float hz = 80.0f + (12000.0f - 80.0f) * (v / 127.0f);
-  // FILTROS[16].setCutoff(hz);
-  // FILTROS[17].setCutoff(hz);
 }
 
-// Déclenchement pad « normal » (prend SAM/INI/END/PIT du pad)
+// CORRECTION: Versions unifiées des fonctions trigger
 void synthESP32_TRIGGER(uint8_t voice){
   if (voice >= 16) {
     Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
@@ -547,10 +511,10 @@ void synthESP32_TRIGGER(uint8_t voice){
   const int32_t ini12 = ROTvalue[voice][1];
   const int32_t end12 = ROTvalue[voice][2];
   const int32_t pit   = ROTvalue[voice][3];
-  const int32_t rev   = ROTvalue[voice][4]; // 0/1
+  const int32_t rev   = ROTvalue[voice][4];
 
   const int16_t* buf = SAMPLES[slot];
-  const uint64_t len = ENDS[slot] + 1;   // ENDS = maxIndex, on veut une longueur
+  const uint64_t len = ENDS[slot] + 1;
 
   if (!buf || len < 2) {
     Serial.printf("[SYNTH] No sample in slot %d for voice %d\n", slot, voice);
@@ -560,15 +524,13 @@ void synthESP32_TRIGGER(uint8_t voice){
   uint64_t start=0, end=0;
   applyStartEndForSlot(slot, len, ini12, end12, start, end);
 
-  // programme la voix pour la prochaine trame audio
   samplePos[voice] = (rev ? end : start) << 16;     // 16.16
   stepSize[voice]  = makeStepSizeFromPit(pit) * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 1;  // 0 = (re)lancer la voix (selon ta convention)
+  latch[voice]     = 1;
 
   Serial.printf("[SYNTH] Triggered voice %d, slot %d, pitch %d\n", voice, slot, pit);
 }
 
-// Déclenchement avec pitch explicite (mode piano) : on ignore ROTvalue[..][3] et on impose pitch
 void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
   if (voice >= 16) {
     Serial.printf("[SYNTH] Invalid voice: %d\n", voice);
@@ -601,13 +563,11 @@ void synthESP32_TRIGGER_P(uint8_t voice, int pitch){
   uint64_t start=0, end=0;
   applyStartEndForSlot(slot, len, ini12, end12, start, end);
 
-  // pitch (0..127) mappé pareil que makeStepSizeFromPit, mais en entrant direct
-  // On réutilise la même logique, mais en forçant "pit" = pitch
   uint64_t step = makeStepSizeFromPit(pitch);
 
   samplePos[voice] = (rev ? end : start) << 16; // 16.16
   stepSize[voice]  = step * (rev ? (uint64_t)(-1) : (uint64_t)1);
-  latch[voice]     = 1; // CORRECTION: 1 = activer
+  latch[voice]     = 1;
   
   Serial.printf("[SYNTH] Triggered voice %d with pitch %d (MIDI)\n", voice, pitch);
 }

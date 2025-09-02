@@ -1,3 +1,4 @@
+// ========== CORRECTIONS ROTS.INO ==========
 #include "Arduino.h"
 #include "synth_api.h"
 #include <uClock.h>
@@ -18,7 +19,8 @@ extern uint8_t selected_scale;
 extern byte selected_rot;
 extern byte selected_sound;
 extern int32_t ROTvalue[16][8];
-extern bool playing;
+// CORRECTION: Harmonisation du type volatile
+extern volatile bool playing;
 
 // NOUVEAU: Validation des valeurs rotary
 static int validateRotaryValue(byte rot, int value) {
@@ -75,7 +77,7 @@ void select_rot() {
                 counter1);
 }
 
-// NOUVEAU: Application du changement avec validation et feedback
+// Application du changement avec validation et feedback
 void do_rot() {
   if (counter1 == old_counter1) return;
   
@@ -140,7 +142,7 @@ void do_rot() {
       
     case 8:  // BPM - Tempo global
       bpm = counter1; 
-      // NOUVEAU: Appliquer BPM au séquenceur en temps réel
+      // Appliquer BPM au séquenceur en temps réel
       if (playing) {
         uClock.setTempo(bpm);
         Serial.printf("[ROT] BPM changed to %d (live)\n", bpm);
@@ -155,7 +157,7 @@ void do_rot() {
       synthESP32_setMVol((uint8_t)master_vol);
       drawBar(9);
       Serial.printf("[ROT] Master volume -> %d\n", master_vol);
-             break;
+      break;
              
     case 10: // TRP - Transpose
       ztranspose = counter1; 
@@ -168,7 +170,7 @@ void do_rot() {
       synthESP32_setMFilter((uint8_t)master_filter);
       drawBar(11);
       Serial.printf("[ROT] Master filter -> %d\n", master_filter);
-             break;
+      break;
              
     case 12: // OCT - Octave
       octave = counter1; 

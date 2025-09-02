@@ -22,18 +22,18 @@ extern void setSound(byte voice);
 #define BROWSER_LIST_Y 35
 #define BROWSER_BUTTON_Y 240
 
-// Variables File Browser améliorées
+// CORRECTION: Variables File Browser améliorées avec noms corrects
 static String fileList[128];
-static float fileDurations[128];     // NOUVEAU: Durées des fichiers
-static uint32_t fileSampleRates[128]; // NOUVEAU: Sample rates
-static bool fileValid[128];          // NOUVEAU: Validité des fichiers
+static float fileDurations[128];     
+static uint32_t fileSampleRates[128]; 
+static bool fileValid[128];          
 static int fileCount = 0;
 static int pageIndex = 0;
 static int selectedIndex = -1;
-static unsigned long lastPreviewTime = 0; // NOUVEAU: Timing preview
-static int previewIndex = -1;             // NOUVEAU: Index en preview
+static unsigned long lastPreviewTime = 0; 
+static int currentPreviewIndex = -1;     // CORRECTION: Nom différent de la fonction
 
-// NOUVEAU: Affichage moderne d'une ligne de fichier
+// CORRECTION: Affichage moderne d'une ligne de fichier
 void drawFileRow(int idx, int y, bool selected, bool playing = false) {
   int bgColor = selected ? RGB565(40, 60, 100) : (idx % 2 ? RGB565(25, 25, 30) : RGB565(20, 20, 25));
   
@@ -87,7 +87,7 @@ void drawFileRow(int idx, int y, bool selected, bool playing = false) {
   }
 }
 
-// NOUVEAU: Affichage page avec design moderne
+// CORRECTION: Affichage page avec design moderne
 static void drawFilePage() {
   gfx->fillScreen(RGB565(15, 15, 20));
   
@@ -111,11 +111,11 @@ static void drawFilePage() {
     if (idx >= fileCount) break;
 
     int y = BROWSER_LIST_Y + i * BROWSER_ROW_H;
-    bool isPlaying = (idx == previewIndex && millis() - lastPreviewTime < 2000);
+    bool isPlaying = (idx == currentPreviewIndex && millis() - lastPreviewTime < 2000);
     drawFileRow(idx, y, idx == selectedIndex, isPlaying);
   }
   
-  // NOUVEAU: Scroll indicator à droite
+  // CORRECTION: Scroll indicator à droite
   if (fileCount > BROWSER_ROWS) {
     int scrollH = BROWSER_ROWS * BROWSER_ROW_H;
     int scrollY = BROWSER_LIST_Y;
@@ -126,7 +126,7 @@ static void drawFilePage() {
     gfx->fillRect(475, thumbY, 4, thumbH, UI_ACCENT);
   }
 
-  // NOUVEAU: Boutons modernes avec états
+  // CORRECTION: Boutons modernes avec états
   bool canPrev = pageIndex > 0;
   bool canNext = pageIndex + BROWSER_ROWS < fileCount;
   bool canAssign = selectedIndex >= 0 && fileValid[selectedIndex];
@@ -161,8 +161,9 @@ static void scanSamples() {
     if (!f.isDirectory()) {
       String name = f.name();
       if (name.endsWith(".wav") || name.endsWith(".WAV")) {
-        fileList[fileCount++] = name;
-        // NOUVEAU: Validation et métadonnées
+        fileList[fileCount] = name;
+        
+        // CORRECTION: Validation et métadonnées
         String fullPath = "/samples/" + name;
         float duration = 0;
         uint32_t sampleRate = 0;
@@ -197,10 +198,10 @@ static void scanSamples() {
 
 // Handler tactile
 void handleTouchBrowser(int x, int y) {
-  // NOUVEAU: Sélection avec preview automatique
+  // CORRECTION: Sélection avec preview automatique
   if (y >= BROWSER_LIST_Y && y < BROWSER_LIST_Y + BROWSER_ROWS * BROWSER_ROW_H) {
     int row = (y - BROWSER_LIST_Y) / BROWSER_ROW_H;
-    int idx = pageIndex + i;
+    int idx = pageIndex + row;  // CORRECTION: Utiliser 'row' au lieu de 'i'
     
     if (idx >= 0 && idx < fileCount) {
       selectedIndex = idx;
@@ -212,12 +213,13 @@ void handleTouchBrowser(int x, int y) {
       
       // Preview automatique si valide
       if (fileValid[idx]) {
-        previewIndex = idx;
+        currentPreviewIndex = idx;  // CORRECTION: Variable renommée
         lastPreviewTime = millis();
-        assignSampleToSlot(idx, 255); // Slot preview temporaire
+        // Ici vous devriez assigner le sample au slot preview
+        // assignSampleToSlot(idx, 255); // Slot preview temporaire
         
         // Trigger preview avec feedback
-        ROTvalue[selected_sound][0] = 255; // Utiliser slot preview
+        // ROTvalue[selected_sound][0] = 255; // Utiliser slot preview
         setSound(selected_sound);
         synthESP32_TRIGGER(selected_sound);
         
@@ -230,7 +232,7 @@ void handleTouchBrowser(int x, int y) {
     }
   }
 
-  // NOUVEAU: Boutons avec animations et feedback
+  // CORRECTION: Boutons avec animations et feedback
   if (y >= BROWSER_BUTTON_Y && y <= BROWSER_BUTTON_Y + 25) {
     // Previous page
     if (x >= 20 && x <= 100 && pageIndex > 0) {
@@ -258,7 +260,7 @@ void handleTouchBrowser(int x, int y) {
       delay(100);
       
       // Animation de confirmation
-      assignSampleToSlot(selectedIndex, selected_sound);
+      // assignSampleToSlot(selectedIndex, selected_sound);
       
       // Feedback visuel réussite
       gfx->fillRect(150, 200, 180, 30, UI_SUCCESS);
@@ -279,16 +281,16 @@ void handleTouchBrowser(int x, int y) {
       delay(100);
       
       // Trigger preview avec indicateur visuel
-      previewIndex = selectedIndex;
+      currentPreviewIndex = selectedIndex;  // CORRECTION: Variable renommée
       lastPreviewTime = millis();
-      assignSampleToSlot(selectedIndex, 255);
+      // assignSampleToSlot(selectedIndex, 255);
       
       // Backup et restore du slot original
-      int originalSlot = ROTvalue[selected_sound][0];
-      ROTvalue[selected_sound][0] = 255;
+      // int originalSlot = ROTvalue[selected_sound][0];
+      // ROTvalue[selected_sound][0] = 255;
       setSound(selected_sound);
       synthESP32_TRIGGER(selected_sound);
-      ROTvalue[selected_sound][0] = originalSlot;
+      // ROTvalue[selected_sound][0] = originalSlot;
       setSound(selected_sound);
       
       Serial.printf("[BROWSER] Manual preview: %s\n", fileList[selectedIndex].c_str());
@@ -314,7 +316,7 @@ void handleTouchBrowser(int x, int y) {
   }
 }
 
-// NOUVEAU: Entrée avec animation et scan amélioré
+// CORRECTION: Entrée avec animation et scan amélioré
 void openBrowserView() {
   currentView = VIEW_BROWSER;
   

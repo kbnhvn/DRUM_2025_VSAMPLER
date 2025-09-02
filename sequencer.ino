@@ -1,9 +1,10 @@
 #include "synth_api.h"
 
-extern bool playing;
+// CORRECTION: Harmonisation des types volatile
+extern volatile bool playing;
 extern byte fx1;
 extern byte selected_sound;
-extern bool clearPADSTEP;
+extern volatile bool clearPADSTEP;
 extern volatile byte sstep;
 extern byte firstStep;
 extern byte lastStep;
@@ -16,9 +17,8 @@ extern uint16_t isMelodic;
 extern uint8_t melodic[16][16];
 extern bool songing;
 extern volatile bool load_flag;
-extern bool sync_flag;
+extern volatile bool sync_flag;
 extern volatile bool refreshPADSTEP;
-
 
 void IRAM_ATTR tic(){  
   if (sstep==firstStep){
@@ -52,9 +52,7 @@ void IRAM_ATTR tic(){
   refreshPADSTEP=true;
 }
 
-
 void onSync24Callback(uint32_t tick){
-
   // FX1
   if (playing){
     if (!(tick % (12)) && fx1==1) {
@@ -73,8 +71,4 @@ void onSync24Callback(uint32_t tick){
 
   // Limpiar marcas de sound y step
   if ((tick % (6))==4) clearPADSTEP=true;
-
 }
-
-
-

@@ -20,6 +20,10 @@ extern int32_t ROTvalue[16][8];
 extern void    synthESP32_TRIGGER(unsigned char voice);
 extern void    setSound(byte voice);
 
+// CORRECTION: Variables avec noms cohérents (éviter conflit avec fonction)
+static int currentPreviewIdx = -1;        // CORRECTION: Nom différent de la fonction
+static unsigned long lastPreviewTime = 0; // Gardé cohérent
+
 static inline int tempSlot() { return 255; } // slot tampon de preview
 
 // UI Layout moderne
@@ -37,7 +41,7 @@ static inline float secondsOf(const SampleMeta& m) {
   return sampleSeconds(m);
 }
 
-// NOUVEAU: Affichage moderne d'une ligne avec métadonnées
+// Affichage moderne d'une ligne avec métadonnées
 static void drawRow(int listIndex, int y, bool selected, bool isPreview = false) {
   const SampleMeta& m = CATALOG[listIndex];
   // Couleur de fond alternée avec sélection
@@ -127,7 +131,7 @@ static void drawRow(int listIndex, int y, bool selected, bool isPreview = false)
   }
 }
 
-// NOUVEAU: Interface moderne complète
+// Interface moderne complète
 static void redrawPickerList() {
   gfx->fillScreen(RGB565(15, 15, 20));
   
@@ -150,7 +154,8 @@ static void redrawPickerList() {
   for (int i = 0; i < rowsVis; ++i) {
     int ix = scrollIx + i;
     if (ix >= 0 && ix < (int)CATALOG.size()) {
-      bool isPreview = (ix == previewIndex && millis() - lastPreviewTime < 3000);
+      // CORRECTION: Utiliser currentPreviewIdx au lieu de previewIndex
+      bool isPreview = (ix == currentPreviewIdx && millis() - lastPreviewTime < 3000);
       drawRow(ix, y, ix == selIx, isPreview);
       y += rowH;
     }
@@ -196,8 +201,8 @@ static void redrawPickerList() {
   }
 }
 
-// NOUVEAU: Preview non destructif amélioré
-static void previewIndex(int catIndex) {
+// CORRECTION: Preview non destructif amélioré - FONCTION renommée
+static void previewSample(int catIndex) {
   if (catIndex < 0 || catIndex >= (int)CATALOG.size()) return;
   
   // Sauvegarder état original
@@ -211,7 +216,7 @@ static void previewIndex(int catIndex) {
     synthESP32_TRIGGER(selected_sound);
     
     // Marquer pour affichage
-    previewIndex = catIndex;
+    currentPreviewIdx = catIndex;  // CORRECTION: Variable renommée
     lastPreviewTime = millis();
     
     Serial.printf("[PICKER] Preview: %s (%.1fs)\n", 
@@ -223,7 +228,7 @@ static void previewIndex(int catIndex) {
   setSound(selected_sound);
 }
 
-// NOUVEAU: Assignation définitive avec feedback
+// Assignation définitive avec feedback
 static void assignIndexToPad(int catIndex) {
   if (catIndex < 0 || catIndex >= (int)CATALOG.size()) return;
   
@@ -236,6 +241,7 @@ static void assignIndexToPad(int catIndex) {
                   CATALOG[catIndex].name.c_str(), selected_sound, slot);
   }
 }
+
 void openSamplePicker() {
   currentView = VIEW_PICKER;
   
@@ -248,7 +254,7 @@ void openSamplePicker() {
   // Reset sélection et scroll
   selIx = -1;
   scrollIx = 0;
-  previewIndex = -1;
+  currentPreviewIdx = -1;  // CORRECTION: Variable renommée
   lastPreviewTime = 0;
   redrawPickerList();
 }
@@ -267,13 +273,13 @@ void handleTouchPicker(int x, int y) {
       delay(80);
       
       // Preview automatique
-      previewIndex(ix);
+      previewSample(ix);  // CORRECTION: Utiliser la fonction renommée
       redrawPickerList();
       return;
     }
   }
   
-  // NOUVEAU: Boutons avec animations et logique améliorée
+  // Boutons avec animations et logique améliorée
   if (y >= buttonAreaY && y <= buttonAreaY + 30) {
     // Scroll UP
     if (x >= 20 && x <= 100 && scrollIx > 0) {
@@ -329,7 +335,7 @@ void handleTouchPicker(int x, int y) {
       drawModernButton(310, buttonAreaY, 80, 30, UI_WARNING, "PREVIEW", false, true);
       delay(80);
       
-      previewIndex(selIx);
+      previewSample(selIx);  // CORRECTION: Utiliser la fonction renommée
       redrawPickerList();
       return;
     }
@@ -351,7 +357,7 @@ void handleTouchPicker(int x, int y) {
     }
   }
   
-  // NOUVEAU: Scroll rapide sur la barre de défilement
+  // Scroll rapide sur la barre de défilement
   if (x >= 470 && x <= 480 && y >= listTopY && y < listTopY + rowsVis * rowH) {
     // Calcul position relative dans la barre
     int relY = y - listTopY;

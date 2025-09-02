@@ -1,9 +1,8 @@
+// ========== CORRECTIONS TOUCH.INO ==========
 #include <Arduino.h>
 #include <Wire.h>
 #include "views.h"
 
-// Touch GT911 avec améliorations
-// Touch GT911 (pins/addr déjà définis ailleurs)
 extern int BPOS[48][4];
 extern bool touchActivo;
 extern int  last_touched;
@@ -11,42 +10,36 @@ extern long start_debounce;
 extern const int debounce_time;
 extern int  cox, coy;
 
-// Triggers et états UI
 extern byte trigger_on[48];
 extern View currentView;
 extern void forceCompleteRedraw();
 
-// GFX (si besoin de logs à l’écran)
 extern Arduino_GFX *gfx;
 extern void synthESP32_TRIGGER(uint8_t voice);
 
-// Protos handlers vues secondaires
 void handleTouchMenu(int x,int y);
 void handleTouchPattern(int x,int y);
 void handleTouchSong(int x,int y);
 void handleTouchBrowser(int x,int y);
 void handleTouchPicker(int x,int y);
 
-// GT911
 #define GT911_ADDR 0x5D
 
-// Reset GT911
 void resetGT911() {
-  pinMode(TOUCH_RST, OUTPUT);
+  pinMode(TOUCH_RST, TOUCH_OUTPUT);
   pinMode(TOUCH_INT, OUTPUT);
   digitalWrite(TOUCH_INT, LOW);
   delay(5);
   digitalWrite(TOUCH_RST, LOW);
-  delay(20);  // NOUVEAU: Délai plus long pour stabilité
+  delay(20);
   digitalWrite(TOUCH_RST, HIGH);
-  delay(100); // NOUVEAU: Délai plus long
+  delay(100);
   pinMode(TOUCH_INT, INPUT);
   delay(100);
 
   Serial.println("[TOUCH] GT911 reset completed");
 }
 
-// I2C helpers
 static uint8_t readRegister8(uint16_t reg) {
   Wire.beginTransmission(GT911_ADDR);
   Wire.write(reg >> 8);
@@ -59,6 +52,7 @@ static uint8_t readRegister8(uint16_t reg) {
   }
   return Wire.available() ? Wire.read() : 0;
 }
+
 static void readRegisterMultiple(uint16_t reg, uint8_t *buffer, uint8_t length) {
   Wire.beginTransmission(GT911_ADDR);
   Wire.write(reg >> 8);
@@ -82,11 +76,8 @@ static void writeRegister8(uint16_t reg, uint8_t value) {
   Wire.endTransmission();
 }
 
-// NOUVEAU: Lecture tactile robuste avec validation
 void read_touch() {
-  // Vérification I2C disponible
   if (!Wire.available() && touchActivo) {
-    // Potentiel timeout I2C, reset de l'état
     touchActivo = false;
     return;
   }
@@ -97,19 +88,16 @@ void read_touch() {
     if (!touchActivo) {
       touchActivo = true;
 
-      // NOUVEAU: Validation du délai debounce
       if (last_touched >= 0 && (start_debounce + debounce_time > (long)millis())) {
-        writeRegister8(0x814E, 0x00); // Clear interrupt
-        return; // Encore en période de debounce
+        writeRegister8(0x814E, 0x00);
+        return;
       }
 
-      // Lit le premier point
       uint8_t data[8] = {0};
       readRegisterMultiple(0x8150, data, 8);
       uint16_t x = (data[1] << 8) | data[0];
       uint16_t y = (data[3] << 8) | data[2];
       
-      // NOUVEAU: Validation coordonnées
       if (x >= 480 || y >= 272) {
         Serial.printf("[TOUCH] Invalid coordinates: x=%d, y=%d\n", x, y);
         touchActivo = false;
@@ -121,17 +109,13 @@ void read_touch() {
 
       Serial.printf("[TOUCH] Detected at x=%d, y=%d in view %d\n", cox, coy, currentView);
 
-      // Dispatch selon la vue
       switch (currentView){
         case VIEW_MAIN:
-          // Mapping sur grille principale avec validation
           for (byte f = 0; f < 48; f++) {
             int x0 = BPOS[f][0], y0 = BPOS[f][1], w = BPOS[f][2], h = BPOS[f][3];
             
-            // NOUVEAU: Validation des bounds
             if (w <= 0 || h <= 0) continue;
             if ((cox > x0) && (cox < x0+w) && (coy > y0) && (coy < y0+h)) {
-              // NOUVEAU: Double vérification debounce
               if (f == last_touched && (start_debounce + debounce_time > (long)millis())) {
                 Serial.printf("[TOUCH] Debounce active for button %d\n", f);
                 break;
@@ -175,29 +159,24 @@ void read_touch() {
       }
     }
   } else {
-    // NOUVEAU: Reset state plus propre
     if (touchActivo) {
       Serial.println("[TOUCH] Touch released");
     }
     touchActivo = false;
   }
 
-  // Clear interrupt/status
   writeRegister8(0x814E, 0x00);
 }
 
-// NOUVEAU: Fonction de diagnostic touch
 void diagnoseTouchSystem() {
   Serial.println("[TOUCH] === Touch System Diagnostics ===");
   
-  // Test I2C communication
   Wire.beginTransmission(GT911_ADDR);
   byte error = Wire.endTransmission();
   
   if (error == 0) {
     Serial.println("[TOUCH] GT911 I2C communication: OK");
     
-    // Lire quelques registres de base
     uint8_t productId[4];
     readRegisterMultiple(0x8140, productId, 4);
     Serial.printf("[TOUCH] Product ID: %c%c%c%c\n", 
@@ -212,7 +191,6 @@ void diagnoseTouchSystem() {
     resetGT911();
   }
   
-  // État des boutons
   Serial.printf("[TOUCH] Current view: %d\n", currentView);
   Serial.printf("[TOUCH] Touch active: %s\n", touchActivo ? "YES" : "NO");
   Serial.printf("[TOUCH] Last touched: %d\n", last_touched);
