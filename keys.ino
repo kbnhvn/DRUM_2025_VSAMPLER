@@ -20,9 +20,10 @@ void setRandomPattern(byte v);
 void setRandomNotes(byte v);
 
 void DO_KEYPAD(){
-
-  // Si on est dans une vue secondaire → aucune action sur la grille principale
+  // CORRECTION: Protection absolue - ne rien faire si on n'est pas dans VIEW_MAIN
   if (currentView != VIEW_MAIN) {
+    // Reset tous les triggers pour éviter les actions parasites
+    memset(trigger_on, 0, sizeof(trigger_on));
     return;
   }
 

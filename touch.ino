@@ -87,6 +87,11 @@ void read_touch() {
   if (status & 0x80) { // Touch detected
     if (!touchActivo) {
       touchActivo = true;
+      // CORRECTION: Debounce global mais reset trigger_on pour autres vues
+      if (last_touched >= 0 && (start_debounce + debounce_time > (long)millis())) {
+        writeRegister8(0x814E, 0x00);
+        return;
+      }
 
       if (last_touched >= 0 && (start_debounce + debounce_time > (long)millis())) {
         writeRegister8(0x814E, 0x00);
@@ -110,7 +115,7 @@ void read_touch() {
       Serial.printf("[TOUCH] Detected at x=%d, y=%d in view %d\n", cox, coy, currentView);
 
       switch (currentView){
-        case VIEW_MAIN:
+          // CORRECTION: Ne traiter les zones tactiles principales QUE dans VIEW_MAIN
           for (byte f = 0; f < 48; f++) {
             int x0 = BPOS[f][0], y0 = BPOS[f][1], w = BPOS[f][2], h = BPOS[f][3];
             
@@ -134,26 +139,31 @@ void read_touch() {
         case VIEW_MENU:
           handleTouchMenu(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
           break;
 
         case VIEW_PATTERN:
           handleTouchPattern(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
           break;
 
         case VIEW_SONG:
           handleTouchSong(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
           break;
 
         case VIEW_BROWSER:
           handleTouchBrowser(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
           break;
 
         case VIEW_PICKER:
           handleTouchPicker(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
           break;
 
         default:

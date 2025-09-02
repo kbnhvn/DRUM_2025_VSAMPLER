@@ -75,21 +75,28 @@ const uint8_t icon_off[] = {
 void forceCompleteRedraw() {
   Serial.println("[UI] Force complete redraw");
   
-  // Clear complet de l'écran
+  // CORRECTION: Clear complet ET attendre que le clear soit effectif
   if (gfx) {
     gfx->fillScreen(BLACK);
-    delay(50); // Laisser le temps au clear de s'appliquer
+    delay(100); // Délai plus long pour s'assurer que le clear est appliqué
+    
+    // CORRECTION: Reset explicite de tous les états visuels
+    memset(trigger_on, 0, sizeof(trigger_on));
+    show_last_touched = false;
+    last_touched = -1;
   }
   
   // Redraw selon la vue courante
   switch (currentView) {
     case VIEW_MAIN:
       // Interface principale complète
+      pauseMainUIRefresh();
       drawScreen1_ONLY1();         // Pads + boutons
       draw8aBar();                 // Barres 0-7
       draw8bBar();                 // Barres 8-15
       show_dark_selectors_ONLY1(); // Sélecteurs
       show_all_bars_ONLY1();       // Contours barres
+      delay(50);
       
       // Forcer le refresh des états
       refreshPATTERN = true;
@@ -105,26 +112,32 @@ void forceCompleteRedraw() {
       s_old_modeZ = -1;
       s_old_sstep = -1;
       
+      resumeMainUIRefresh();
       Serial.println("[UI] Main view redrawn completely");
       break;
       
     case VIEW_MENU:
+      pauseMainUIRefresh();
       drawMenuView();
       break;
       
     case VIEW_PATTERN:
+      pauseMainUIRefresh();
       openPatternView();
       break;
       
     case VIEW_SONG:
+      pauseMainUIRefresh();
       openSongView();
       break;
       
     case VIEW_BROWSER:
+      pauseMainUIRefresh();
       openBrowserView();
       break;
       
     case VIEW_PICKER:
+      pauseMainUIRefresh();
       openSamplePicker();
       break;
       
@@ -159,6 +172,9 @@ void drawModernButton(int x, int y, int w, int h, int color, const char* text, b
 }
 
 void showLastTouched() {
+  if (currentView != VIEW_MAIN) {
+    return;
+  }
   if (!show_last_touched) {
     return;
   }
@@ -170,6 +186,9 @@ void showLastTouched() {
 }
 
 void clearLastTouched() {
+  if (currentView != VIEW_MAIN) {
+    return;
+  }
   if (!show_last_touched) {
     return;
   }
@@ -302,7 +321,9 @@ void drawBT(byte bt, int color, String texto = "") {
 }
 
 void REFRESH_KEYS() {
-
+  if (currentView != VIEW_MAIN) {
+    return;
+  }
   // NOUVEAU: Protection contre variables non initialisées
   if (s_old_selected_sound > 15) s_old_selected_sound = 0;
   if (s_old_selected_pattern > 15) s_old_selected_pattern = 0;
@@ -650,7 +671,9 @@ void draw8bBar(){
 
 
 void REFRESH_STATUS(){
-  
+  if (currentView != VIEW_MAIN) {
+    return;
+  }
   int pos_x;
   int pos_y;
 
@@ -936,4 +959,28 @@ void drawButtonBox(int x,int y,int w,int h, int color, const char* texto, bool p
   gfx->setTextColor(drawColor, bgColor);
   gfx->setCursor(x + 8, y + (h/2) + 3);
   gfx->print(texto);
+}
+
+void pauseMainUIRefresh() {
+  // Fonction pour suspendre temporairement les refresh
+  refreshPATTERN = false;
+  refreshMODES = false; 
+  refreshPADSTEP = false;
+  clearPATTERNPADS = false;
+  
+  // Reset visual artifacts
+  show_last_touched = false;
+  last_touched = -1;
+  
+  Serial.println("[UI] Main UI refresh paused");
+}
+
+void resumeMainUIRefresh() {
+  // Relancer les refresh quand on revient à VIEW_MAIN
+  refreshPATTERN = true;
+  refreshMODES = true;
+  s_old_selected_sound = 255;  // Force redraw
+  s_old_modeZ = -1;
+  
+  Serial.println("[UI] Main UI refresh resumed");
 }

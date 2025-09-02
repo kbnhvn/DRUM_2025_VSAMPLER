@@ -262,7 +262,10 @@ void handleTouchMenu(int x,int y){
     }
  
     currentView = VIEW_MAIN;
+    // CORRECTION: S'assurer que l'UI principale reprend proprement
+    pauseMainUIRefresh();  // Reset état
     forceCompleteRedraw();
+    resumeMainUIRefresh(); // Relancer
     return; 
   }
   

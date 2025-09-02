@@ -308,7 +308,10 @@ void handleTouchBrowser(int x, int y) {
       
       Serial.println("[BROWSER] Returning to main view");
       currentView = VIEW_MAIN;
+      // CORRECTION: S'assurer que l'UI principale reprend proprement
+      pauseMainUIRefresh();  // Reset état
       forceCompleteRedraw();
+      resumeMainUIRefresh(); // Relancer
       return;
     }
   }

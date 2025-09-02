@@ -587,12 +587,14 @@ void loop() {
   //   uClock.stop();
   // }
   
-  DO_KEYPAD();
-  REFRESH_KEYS();
-  REFRESH_STATUS();
-
-  showLastTouched();
-  clearLastTouched();
+  // CORRECTION: Ne traiter l'UI principale QUE si on est dans VIEW_MAIN
+  if (currentView == VIEW_MAIN) {
+    DO_KEYPAD();
+    REFRESH_KEYS();
+    REFRESH_STATUS();
+    showLastTouched();
+    clearLastTouched();
+  }
 
   // CORRECTION: == au lieu de =
   if (flag_ss == true){
