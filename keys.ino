@@ -312,7 +312,8 @@ void DO_KEYPAD(){
               break;
             // Song
             case 23:
-              openSongView();
+              Serial.println("[KEY] Opening song view");
+              changeView(VIEW_SONG);      // Au lieu de openSongView()
               break;
           }  
 
@@ -401,13 +402,17 @@ void DO_KEYPAD(){
             break;
           case 29:
             if (shifting || shiftR1) {
-              openSamplePicker();
+              Serial.println("[KEY] Opening sample picker");
+              changeView(VIEW_PICKER);  // Au lieu de openSamplePicker()
             } else {
-              openPatternView();
+              Serial.println("[KEY] Opening pattern view");
+              changeView(VIEW_PATTERN); // Au lieu de openPatternView()
             }
             break;
+
           case 30:
-            openMenuView();
+            Serial.println("[KEY] Opening menu");
+            changeView(VIEW_MENU);      // Au lieu de openMenuView()
             break;
           case 31:
             shifting=!shifting;

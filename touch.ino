@@ -87,11 +87,6 @@ void read_touch() {
   if (status & 0x80) { // Touch detected
     if (!touchActivo) {
       touchActivo = true;
-      // CORRECTION: Debounce global mais reset trigger_on pour autres vues
-      if (last_touched >= 0 && (start_debounce + debounce_time > (long)millis())) {
-        writeRegister8(0x814E, 0x00);
-        return;
-      }
 
       if (last_touched >= 0 && (start_debounce + debounce_time > (long)millis())) {
         writeRegister8(0x814E, 0x00);
@@ -112,10 +107,13 @@ void read_touch() {
  
       cox = x; coy = y;
 
-      Serial.printf("[TOUCH] Detected at x=%d, y=%d in view %d\n", cox, coy, currentView);
+      Serial.printf("[TOUCH] Detected at x=%d, y=%d in view %d\n", cox, coy, (int)currentView);
 
+      // CORRECTION CRITIQUE: Le switch doit être exhaustif et correct
       switch (currentView){
-          // CORRECTION: Ne traiter les zones tactiles principales QUE dans VIEW_MAIN
+        case VIEW_MAIN:
+          Serial.println("[TOUCH] Processing main view touch");
+          // Traitement des zones tactiles principales
           for (byte f = 0; f < 48; f++) {
             int x0 = BPOS[f][0], y0 = BPOS[f][1], w = BPOS[f][2], h = BPOS[f][3];
             
@@ -137,39 +135,53 @@ void read_touch() {
           break;
 
         case VIEW_MENU:
+          Serial.println("[TOUCH] Processing menu view touch");
           handleTouchMenu(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
           last_touched = -1;
           break;
 
         case VIEW_PATTERN:
+          Serial.println("[TOUCH] Processing pattern view touch");
           handleTouchPattern(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
           last_touched = -1;
           break;
 
         case VIEW_SONG:
+          Serial.println("[TOUCH] Processing song view touch");
           handleTouchSong(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
           last_touched = -1;
           break;
 
         case VIEW_BROWSER:
+          Serial.println("[TOUCH] Processing browser view touch");
           handleTouchBrowser(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
           last_touched = -1;
           break;
 
         case VIEW_PICKER:
+          Serial.println("[TOUCH] Processing picker view touch");
           handleTouchPicker(cox, coy);
           memset(trigger_on, 0, sizeof(trigger_on));
           last_touched = -1;
           break;
 
+        case VIEW_WIFI:
+          Serial.println("[TOUCH] Processing WiFi view touch (if implemented)");
+          // handleTouchWifi(cox, coy); // Si cette vue existe
+          memset(trigger_on, 0, sizeof(trigger_on));
+          last_touched = -1;
+          break;
+
         default:
-          Serial.printf("[TOUCH] Unknown view %d, returning to main\n", currentView);
-          currentView = VIEW_MAIN;
-          forceCompleteRedraw();
+          // CORRECTION: Ne plus forcer le retour à main automatiquement
+          Serial.printf("[TOUCH] Unhandled view %d at x=%d, y=%d\n", (int)currentView, cox, coy);
+          // NE PAS changer automatiquement de vue ici
+          // currentView = VIEW_MAIN;
+          // forceCompleteRedraw();
           break;
       }
     }
@@ -213,4 +225,17 @@ void diagnoseTouchSystem() {
                 max(0L, (start_debounce + debounce_time) - (long)millis()));
   
   Serial.println("[TOUCH] === End Diagnostics ===");
+}
+
+void changeView(View newView) {
+  Serial.printf("[VIEW] Changing from view %d to view %d\n", (int)currentView, (int)newView);
+  currentView = newView;
+  
+  // Reset des états tactiles
+  memset(trigger_on, 0, sizeof(trigger_on));
+  touchActivo = false;
+  show_last_touched = false;
+  last_touched = -1;
+  
+  forceCompleteRedraw();
 }
