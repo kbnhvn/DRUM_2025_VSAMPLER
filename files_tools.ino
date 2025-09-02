@@ -387,7 +387,6 @@ void load_sound(byte idx) {
       // Yield périodique pour watchdog
       if (v % 4 == 0) {
         yield();
-        esp_task_wdt_reset();
       }
     }
   } else {
@@ -403,7 +402,6 @@ void load_sound(byte idx) {
     // Yield pour éviter watchdog timeout
     if (v % 4 == 0) {
       yield();
-      esp_task_wdt_reset();
     }
   }
   

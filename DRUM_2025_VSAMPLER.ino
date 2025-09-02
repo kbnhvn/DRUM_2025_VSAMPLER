@@ -560,7 +560,6 @@ void setup() {
 
 void loop() {
 
-  esp_task_wdt_reset();
   loopWeb();
   
   // flag to do things outside sequencer timer isr

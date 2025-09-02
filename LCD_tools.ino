@@ -76,7 +76,10 @@ void forceCompleteRedraw() {
   Serial.println("[UI] Force complete redraw");
   
   // Clear complet de l'écran
-  gfx->fillScreen(BLACK);
+  if (gfx) {
+    gfx->fillScreen(BLACK);
+    delay(50); // Laisser le temps au clear de s'appliquer
+  }
   
   // Redraw selon la vue courante
   switch (currentView) {

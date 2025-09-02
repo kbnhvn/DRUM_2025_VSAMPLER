@@ -45,6 +45,7 @@ static void scanPatterns() {
 
 // Affichage moderne avec preview du pattern actuel
 static void drawPatternPreview() {
+  gfx->fillScreen(RGB565(15, 15, 20));
   // Zone preview moderne
   gfx->fillRect(300, 70, 170, 120, RGB565(25, 30, 40));
   gfx->drawRect(300, 70, 170, 120, UI_ON_SURFACE);

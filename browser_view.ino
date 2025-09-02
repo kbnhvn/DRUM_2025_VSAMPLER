@@ -179,7 +179,6 @@ static void scanSamples() {
         // Yield pour watchdog
         if (fileCount % 10 == 0) {
           yield();
-          esp_task_wdt_reset();
         }
       }
     }

@@ -142,7 +142,6 @@ static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
       // Yield pour watchdog
       if (samplesRead % 8192 == 0) {
         yield();
-        esp_task_wdt_reset();
       }
     }
   } else {
@@ -169,7 +168,6 @@ static bool readWav16Mono(const char* path, int16_t** out, uint32_t* outlen){
       
       if (samplesRead % 4096 == 0) {
         yield();
-        esp_task_wdt_reset();
       }
     }
   }

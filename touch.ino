@@ -133,22 +133,27 @@ void read_touch() {
 
         case VIEW_MENU:
           handleTouchMenu(cox, coy);
+          memset(trigger_on, 0, sizeof(trigger_on));
           break;
 
         case VIEW_PATTERN:
           handleTouchPattern(cox, coy);
+          memset(trigger_on, 0, sizeof(trigger_on));
           break;
 
         case VIEW_SONG:
           handleTouchSong(cox, coy);
+          memset(trigger_on, 0, sizeof(trigger_on));
           break;
 
         case VIEW_BROWSER:
           handleTouchBrowser(cox, coy);
+          memset(trigger_on, 0, sizeof(trigger_on));
           break;
 
         case VIEW_PICKER:
           handleTouchPicker(cox, coy);
+          memset(trigger_on, 0, sizeof(trigger_on));
           break;
 
         default:
