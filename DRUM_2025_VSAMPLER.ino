@@ -597,7 +597,7 @@ void loop() {
     return; // Cette ligne ne sera jamais atteinte (deep sleep)
   }
   
-  loopWeb()
+  loopWeb();
   
   // flag to do things outside sequencer timer isr
   if (load_flag){
