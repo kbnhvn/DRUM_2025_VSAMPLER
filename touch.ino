@@ -237,5 +237,5 @@ void changeView(View newView) {
   show_last_touched = false;
   last_touched = -1;
   
-  forceCompleteRedraw();
+  // forceCompleteRedraw();
 }
