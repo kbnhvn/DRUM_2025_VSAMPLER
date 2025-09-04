@@ -116,3 +116,20 @@ void wakeBacklight() {
   }
   updateBacklightActivity();
 }
+
+void performWakeAnimation() {
+  if (!gfx) return;
+  
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(RGB565(100, 255, 100), BLACK);
+  gfx->setCursor(190, 130);
+  gfx->print("WAKE UP");
+  
+  // Réveil progressif du backlight
+  for (int brightness = 0; brightness <= 80; brightness += 10) {
+    setBacklightPercent(brightness);
+    delay(80);
+  }
+  
+  delay(1000);
+}

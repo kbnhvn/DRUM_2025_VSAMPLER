@@ -434,22 +434,6 @@ bool clearPATTERNPADS=false;
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
-void performWakeAnimation() {
-  // Animation de réveil depuis SW1
-  gfx->fillScreen(BLACK);
-  gfx->setTextColor(RGB565(100, 255, 100), BLACK);
-  gfx->setCursor(190, 130);
-  gfx->print("WAKE UP");
-  
-  // Réveil progressif du backlight
-  for (int brightness = 0; brightness <= 80; brightness += 10) {
-    setBacklightPercent(brightness);
-    delay(80);
-  }
-  
-  delay(1000);
-}
-
 //////////////////////////////  S E T U P  //////////////////////////////
 void setup() {
 
