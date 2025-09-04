@@ -10,7 +10,6 @@
 #include "sd_catalog.h"
 #include "esp_task_wdt.h"
 #include "views.h"
-#include <esp_sleep.h>
 
 // CORRECTION: Ajouter les variables manquantes au début
 volatile uint8_t sstep = 0;            // CORRECTION: uint8_t au lieu de byte
@@ -299,30 +298,6 @@ int master_vol=80;
 int master_filter=0;
 int octave=5;
 
-// === POWER BUTTON CONFIGURATION ===
-#define POWER_BUTTON_PIN 35         // GPIO libre pour bouton externe
-#define LONG_PRESS_TIME 3000        // 3 secondes pour power off
-#define DEBOUNCE_TIME 50            // Anti-rebond 50ms
-#define BATTERY_CHECK_INTERVAL 1800 // 30 minutes en secondes
-
-// Variables bouton power
-static bool powerButtonState = false;
-static bool lastPowerButtonState = false;
-static unsigned long powerPressTime = 0;
-static unsigned long lastPowerDebounce = 0;
-static bool longPressHandled = false;
-static bool shutdownRequested = false;
-
-// Gestion alimentation
-static bool batteryPowered = true;  // Ajustez selon votre setup
-
-// Prototypes fonctions power
-void initPowerButton();
-void handlePowerButton();
-void performDeepSleep();
-void handleWakeUp();
-bool isPowerButtonPressed();
-
 ////////////////////////////// MIDI USB
 //Adafruit_USBD_MIDI usb_midi;
 //MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
@@ -490,8 +465,6 @@ void setup() {
 
   backlight_init();
 
-  initPowerButton();
-
   gfx->setFont(u8g2_font_5x8_mr);
   gfx->setUTF8Print(true);
   
@@ -587,15 +560,6 @@ void setup() {
 //////////////////////////////  L O O P  //////////////////////////////
 
 void loop() {
-
-  // === GESTION POWER BUTTON - PRIORITÉ MAXIMALE ===
-  handlePowerButton();
-  
-  // Si shutdown demandé, arrêter le loop normal
-  if (shutdownRequested) {
-    performDeepSleep();
-    return; // Cette ligne ne sera jamais atteinte (deep sleep)
-  }
   
   loopWeb();
   
