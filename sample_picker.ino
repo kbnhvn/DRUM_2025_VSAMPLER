@@ -285,28 +285,40 @@ void handleTouchPicker(int x, int y) {
       drawModernButton(20, buttonAreaY, 80, 30, UI_PRIMARY, "UP", true, true);
       delay(80);
       
-      scrollIx = max(0, scrollIx - rowsVis);
-      if (selIx >= 0 && selIx < scrollIx) {
-        selIx = scrollIx; // Garder sélection visible
+      // CORRECTION: Page précédente sans aller en négatif
+      int newScrollIx = scrollIx - rowsVis;
+      scrollIx = max(0, newScrollIx);
+      
+      // Ajuster sélection si nécessaire
+      if (selIx >= 0 && selIx >= scrollIx + rowsVis) {
+        selIx = scrollIx + rowsVis - 1; // Garder sélection visible
       }
       
       redrawPickerList();
-      Serial.printf("[PICKER] Scroll up to %d\n", scrollIx);
+      Serial.printf("[PICKER] Page up to %d\n", scrollIx);
       return;
     }
+
     
     // Scroll DOWN
     if (x >= 110 && x <= 190 && scrollIx + rowsVis < (int)CATALOG.size()) {
       drawModernButton(110, buttonAreaY, 80, 30, UI_PRIMARY, "DOWN", true, true);
       delay(80);
       
-      scrollIx = min((int)CATALOG.size() - rowsVis, scrollIx + rowsVis);
-      if (selIx >= 0 && selIx >= scrollIx + rowsVis) {
-        selIx = scrollIx + rowsVis - 1; // Garder sélection visible
+      // CORRECTION: Calculer proprement la page suivante
+      int maxScrollIx = max(0, (int)CATALOG.size() - rowsVis);
+      int newScrollIx = scrollIx + rowsVis;
+      
+      // Ne pas dépasser la dernière page possible
+      scrollIx = min(maxScrollIx, newScrollIx);
+      
+      // Ajuster sélection si nécessaire
+      if (selIx >= 0 && selIx < scrollIx) {
+        selIx = scrollIx;
       }
       
       redrawPickerList();
-      Serial.printf("[PICKER] Scroll down to %d\n", scrollIx);
+      Serial.printf("[PICKER] Page down to %d (max: %d)\n", scrollIx, maxScrollIx);
       return;
     }
   
