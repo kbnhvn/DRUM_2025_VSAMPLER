@@ -102,6 +102,164 @@ void drawWiFiStatus() {
   }
 }
 
+bool detectBatteryMode() {
+  // MÉTHODE 3: Variable manuelle (temporaire)
+  return true; // Forcez true pour tester
+}
+
+void showUSBSleepWarning() {
+  // Message d'info mode USB
+  gfx->fillRect(80, 100, 320, 80, RGB565(40, 40, 20));
+  gfx->drawRect(80, 100, 320, 80, RGB565(255, 200, 0));
+  
+  gfx->setTextColor(RGB565(255, 200, 0), RGB565(40, 40, 20));
+  gfx->setCursor(170, 125);
+  gfx->print("USB MODE");
+  
+  gfx->setTextColor(WHITE, RGB565(40, 40, 20));
+  gfx->setCursor(120, 145);
+  gfx->print("Switch to battery for");
+  gfx->setCursor(140, 160);
+  gfx->print("sleep functionality");
+  
+  delay(2500);
+  drawMenuView(); // Redraw menu
+}
+
+void showSleepConfirmation() {
+  // Écran de confirmation moderne
+  gfx->fillScreen(RGB565(20, 20, 25));
+  
+  // Titre avec icône sleep
+  gfx->setTextColor(RGB565(100, 50, 150), RGB565(20, 20, 25));
+  gfx->setCursor(180, 80);
+  gfx->print("SLEEP MODE");
+  
+  // Info
+  gfx->setTextColor(WHITE, RGB565(20, 20, 25));
+  gfx->setCursor(140, 110);
+  gfx->print("Device will enter");
+  gfx->setCursor(160, 130);
+  gfx->print("deep sleep mode");
+  
+  gfx->setTextColor(RGB565(150, 150, 150), RGB565(20, 20, 25));
+  gfx->setCursor(120, 150);
+  gfx->print("Press SW1 to wake up");
+  
+  // Boutons de confirmation
+  drawModernButton(120, 180, 100, 35, UI_SUCCESS, "CONFIRM", true, false);
+  drawModernButton(260, 180, 100, 35, UI_DANGER, "CANCEL", true, false);
+  
+  // Barre de progression (auto-cancel après 10s)
+  gfx->drawRect(140, 230, 200, 12, UI_ON_SURFACE);
+  gfx->fillRect(142, 232, 196, 8, RGB565(40, 40, 45));
+  
+  // Attendre choix utilisateur
+  unsigned long startTime = millis();
+  const unsigned long timeout = 10000; // 10 secondes
+  
+  while (millis() - startTime < timeout) {
+    read_touch();
+    
+    if (touchActivo) {
+      // Bouton CONFIRM
+      if (coy >= 180 && coy <= 215 && cox >= 120 && cox <= 220) {
+        drawModernButton(120, 180, 100, 35, UI_SUCCESS, "CONFIRM", true, true);
+        delay(200);
+        
+        Serial.println("[MENU] Sleep confirmed");
+        performSoftwareSleep();
+        return;
+      }
+      
+      // Bouton CANCEL
+      if (coy >= 180 && coy <= 215 && cox >= 260 && cox <= 360) {
+        drawModernButton(260, 180, 100, 35, UI_DANGER, "CANCEL", true, true);
+        delay(200);
+        
+        Serial.println("[MENU] Sleep cancelled");
+        drawMenuView();
+        return;
+      }
+    }
+    
+    // Mise à jour barre de progression
+    unsigned long elapsed = millis() - startTime;
+    int progress = (elapsed * 196) / timeout;
+    gfx->fillRect(142, 232, progress, 8, RGB565(100, 50, 150));
+    
+    delay(50);
+  }
+  
+  // Timeout - annulation automatique
+  Serial.println("[MENU] Sleep timeout - cancelled");
+  gfx->setTextColor(RGB565(255, 100, 100), RGB565(20, 20, 25));
+  gfx->setCursor(190, 250);
+  gfx->print("TIMEOUT");
+  delay(1000);
+  
+  drawMenuView();
+}
+
+void performSoftwareSleep() {
+  Serial.println("[POWER] === SOFTWARE SLEEP INITIATED ===");
+  
+  // Écran de préparation
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(RGB565(100, 50, 150), BLACK);
+  gfx->setCursor(150, 110);
+  gfx->print("ENTERING SLEEP");
+  
+  gfx->setTextColor(WHITE, BLACK);
+  gfx->setCursor(170, 140);
+  gfx->print("Saving...");
+  
+  // Arrêter l'audio
+  for (int i = 0; i < 16; i++) {
+    latch[i] = 0;
+  }
+  
+  // Sauvegarder l'état
+  save_pattern(0);
+  save_sound(0);
+  Serial.println("[POWER] State saved");
+  
+  // Arrêter les services
+  if (isFileServerOn()) {
+    stopFileServer();
+  }
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  
+  // Animation de fermeture
+  gfx->setCursor(160, 160);
+  gfx->print("Going to sleep...");
+  
+  for (int i = 3; i > 0; i--) {
+    gfx->fillRect(160, 180, 160, 20, BLACK);
+    gfx->setCursor(200, 195);
+    gfx->printf("Sleep in %d", i);
+    delay(1000);
+  }
+  
+  // Réduction progressive du backlight
+  for (int brightness = getBacklightPercent(); brightness > 0; brightness -= 10) {
+    setBacklightPercent(brightness);
+    delay(50);
+  }
+  
+  gfx->fillScreen(BLACK);
+  
+  Serial.println("[POWER] Entering deep sleep");
+  Serial.println("[POWER] Wake up: Switch SW1 to battery mode");
+  Serial.flush();
+  
+  // DEEP SLEEP - Wake-up possible par reset/power cycle
+  esp_deep_sleep_start();
+  
+  // Cette ligne ne sera jamais atteinte
+}
+
 void drawMenuView(){
   gfx->fillScreen(RGB565(15, 15, 20)); // Fond moderne
   
@@ -155,6 +313,28 @@ void drawMenuView(){
   drawProgressBar(370, 205, 80, 30, bp, UI_ACCENT);
   drawModernButton(460, 200, 60, 40, UI_PRIMARY, "+", true, false);  
   
+  // NOUVEAU: BOUTON SLEEP
+  // Détection mode batterie (ajustez selon votre hardware)
+  bool onBattery = detectBatteryMode();
+  
+  if (onBattery) {
+    // Bouton Sleep actif si sur batterie
+    drawModernButton(250, 130, 120, 60, RGB565(100, 50, 150), "SLEEP\nMODE", true, false);
+    
+    // Info batterie
+    gfx->setTextColor(UI_ON_SURFACE, RGB565(15, 15, 20));
+    gfx->setCursor(250, 200);
+    gfx->print("Battery Mode");
+    
+  } else {
+    // Bouton grisé si USB
+    drawModernButton(250, 130, 120, 60, RGB565(60, 60, 60), "SLEEP\nMODE", false, false);
+    
+    gfx->setTextColor(RGB565(120, 120, 120), RGB565(15, 15, 20));
+    gfx->setCursor(250, 200);
+    gfx->print("USB Mode");
+  }
+
   // Back button moderne
   drawModernButton(400, 5, 70, 20, UI_DANGER, "BACK", true, false);
 }
@@ -247,6 +427,26 @@ void handleTouchMenu(int x,int y){
       drawMenuView(); 
       return;
     }
+  }
+
+  // NOUVEAU: BOUTON SLEEP
+  if (y >= 130 && y <= 190 && x >= 250 && x <= 370) {
+    bool onBattery = detectBatteryMode();
+    
+    if (!onBattery) {
+      // Mode USB - montrer message d'info
+      showUSBSleepWarning();
+      return;
+    }
+    
+    // Mode batterie - demander confirmation
+    Serial.println("[MENU] Sleep button pressed");
+    
+    drawModernButton(250, 130, 120, 60, RGB565(100, 50, 150), "SLEEP\nMODE", true, true);
+    delay(100);
+    
+    showSleepConfirmation();
+    return;
   }
   
   // Back avec animation de transition

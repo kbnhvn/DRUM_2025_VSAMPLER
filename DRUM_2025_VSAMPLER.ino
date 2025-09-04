@@ -434,6 +434,22 @@ bool clearPATTERNPADS=false;
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
+void performWakeAnimation() {
+  // Animation de réveil depuis SW1
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(RGB565(100, 255, 100), BLACK);
+  gfx->setCursor(190, 130);
+  gfx->print("WAKE UP");
+  
+  // Réveil progressif du backlight
+  for (int brightness = 0; brightness <= 80; brightness += 10) {
+    setBacklightPercent(brightness);
+    delay(80);
+  }
+  
+  delay(1000);
+}
+
 //////////////////////////////  S E T U P  //////////////////////////////
 void setup() {
 
@@ -476,6 +492,19 @@ void setup() {
   delay(100);
   
   Serial.println("[SETUP] Display and touch OK");
+
+
+  // Détecter si réveil du deep sleep
+  esp_sleep_wakeup_cause_t wakeup = esp_sleep_get_wakeup_cause();
+  if (wakeup == ESP_SLEEP_WAKEUP_UNDEFINED) {
+    // Boot normal ou réveil par reset/power
+    Serial.println("[POWER] Normal boot or wake from power switch");
+    
+    // Animation de boot/réveil
+    if (detectBatteryMode()) {
+      performWakeAnimation();
+    }
+  }
 
   // Synth
   Serial.println("[SETUP] Starting synth...");
